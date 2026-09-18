@@ -144,7 +144,7 @@ body.is-intro .nav{opacity:0;pointer-events:none}
 @media (max-width:600px){.intro__osd--tl,.intro__osd--bl{left:30px}.intro__osd--tr,.intro__osd--br{right:30px}.intro__osd--tl,.intro__osd--tr{top:30px}.intro__osd--bl,.intro__osd--br{bottom:30px}.intro__vf i:nth-child(n){width:22px;height:22px}.intro__sub{font-size:11px;letter-spacing:.3em}}
 
 /* ---------- герой ---------- */
-.hero{position:relative;height:var(--hero-h,1050vh)}
+.hero{position:relative;height:100vh;height:100svh}
 .stage{position:sticky;top:0;height:100vh;height:100lvh;overflow:hidden;overflow:clip;isolation:isolate;background:#04060B}
 .stage__amb{position:absolute;inset:-8%;width:116%;height:116%;max-width:none;opacity:0;transition:opacity 1s}
 .stage.is-flank .stage__amb{opacity:1}
@@ -152,9 +152,10 @@ body.is-intro .nav{opacity:0;pointer-events:none}
 .stage.is-flank .stage__frame{box-shadow:0 0 0 1px rgba(140,160,220,.14),0 40px 140px rgba(0,0,0,.65)}
 .stage__poster{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .stage__v{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .7s}
-.stage.video-ready .v-lite{opacity:1}
-.stage.hd .v-hd{opacity:1}
-.stage.hd .v-lite{opacity:0}
+.stage.video-ready .v-fwd{opacity:1}
+.v-rev{transition:none}
+.stage__shade{position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(4,6,12,.74),rgba(4,6,12,.46) 92px,rgba(4,6,12,0) 175px)}
+.stage.rev .v-rev{opacity:1}
 .stage.video-failed .stage__v{display:none}
 /* телефон: такты по свайпу, герой на один экран, плашки меняются плавно */
 @property --k{syntax:"<number>";initial-value:0;inherits:true}
@@ -563,3 +564,19 @@ html.is-static .plate__static-cta{display:flex;flex-wrap:wrap;gap:10px;margin-to
   .iris circle{stroke-dashoffset:0!important;opacity:1!important}
   .iris--ok circle,.iris--ok path{stroke-dashoffset:0}
 }
+
+/* узкий экран: плашка прижата к низу, статусы в две колонки, на второй остановке пожарной плашки
+   текст сворачивается, чтобы не закрывать оповещатель */
+.stage.is-full .plate:not(.plate--cta){top:auto;bottom:calc(14px + env(safe-area-inset-bottom,0px));transform:translate3d(var(--x,0px),0,0)}
+.stage.is-full .status{grid-template-columns:1fr 1fr}
+.plate__fold{display:grid;grid-template-rows:1fr;transition:grid-template-rows .5s var(--ease-out),opacity .3s linear .2s}
+.plate__fold>div{min-height:0}
+.stage.is-full .plate.is-fold .plate__fold{grid-template-rows:0fr;opacity:0;transition:grid-template-rows .5s var(--ease-out) .08s,opacity .2s linear}
+
+/* калькулятор: подпись переносится, цена остаётся внутри карточки */
+.opt__l{flex:1 1 auto;min-width:0}
+.opt--check>span{padding-top:10px;padding-bottom:10px}
+@media (max-width:560px){.opts--2{grid-template-columns:1fr}}
+
+/* прозрачная шапка над светлыми кадрами ролика: лёгкая тень, чтобы пункты читались */
+.nav:not(.is-solid) .nav__links a,.nav:not(.is-solid) .nav__phone,.nav:not(.is-solid) .nav__word{text-shadow:0 1px 3px rgba(0,0,0,.75),0 0 12px rgba(0,0,0,.45)}

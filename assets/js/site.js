@@ -98,15 +98,16 @@ function setupFx() {
 }
 
 /* ================= ГЕРОЙ: видео и плашки ================= */
-/* Как на сайте электриков: на компьютере видео идёт за прокруткой,
-   на телефоне свайп проигрывает ролик до следующей остановки. */
+/* Ролик идёт остановками на любом экране: одно движение колёсика, свайп или стрелка
+   проигрывают его до следующей плашки. Назад играет копия ролика задом наперёд,
+   поэтому обратный ход такой же плавный: браузеры не умеют крутить видео назад. */
 
 const hero = $('#hero');
 const stage = $('#stage');
 const frameEl = $('#frame');
-const vLite = $('#vLite');
-const vHd = $('#vHd');
-let video = vLite;
+const vFwd = $('#vFwd');
+const vRev = $('#vRev');
+let video = vFwd;             // какая из двух записей сейчас на экране
 const amb = $('#amb');
 const actx = amb ? amb.getContext('2d', { alpha: false }) : null;
 const ui = $('#stageUi');
@@ -118,46 +119,62 @@ const loadPillRing = $('#stageLoadRing');
 const loadPillPct = $('#stageLoadPct');
 const cue = $('#cue');
 
-const SRC_W = 1080;
-const SRC_H = 1920;
+let FPS = 30;                 // у каждого ролика своя частота кадров
 let DUR = 12.3;               // уточняется по ролику
-const RANGE = 1200;           // длина героя на компьютере, vh прокрутки
-const RAMP_VH = 18;           // появление и уход плашки, vh
-const KRAMP_VH = 26;          // сборка текста плашки, vh
-const vh2s = v => v / RANGE * DUR;
+let NF = 369;                 // кадров в ролике
 
-// Плашки: когда видны (секунды ролика), сторона и высота на экране.
+// Плашки: сторона и высота на широком экране.
 const PL = [
-  { n: 1, a: 0, b: 1.0, side: 'L', vy: 0.52, first: true },
-  { n: 2, a: 1.1, b: 2.3, side: 'R', vy: 0.46 },
-  { n: 3, a: 2.45, b: 3.6, side: 'L', vy: 0.5 },
-  { n: 4, a: 4.15, b: 6.85, side: 'R', vy: 0.5 },
-  { n: 5, a: 7.35, b: 9.0, side: 'L', vy: 0.44 },
-  { n: 6, a: 9.35, b: 10.65, side: 'R', vy: 0.42 },
-  { n: 7, a: 10.9, b: 99, side: 'C', last: true },
-].map(p => Object.assign(p, { el: $(`.plate[data-plate="${p.n}"]`), op: -1, k: -1, on: false, x: 0, y: 0, w: 0, h: 0, ov: 0 }));
+  { n: 1, side: 'L', vy: 0.52 },
+  { n: 2, side: 'R', vy: 0.46 },
+  { n: 3, side: 'L', vy: 0.5 },
+  { n: 4, side: 'R', vy: 0.5 },
+  { n: 5, side: 'L', vy: 0.44 },
+  { n: 6, side: 'R', vy: 0.42 },
+  { n: 7, side: 'C' },
+].map(p => Object.assign(p, { el: $(`.plate[data-plate="${p.n}"]`), on: false, x: 0, y: 0, w: 0, h: 0, ov: 0 }));
 
-// Телефон: остановки по свайпу (секунды ролика) и плашка на каждой. -1 значит конец ролика.
-const STOPS = [
+// Остановки: секунда ролика и плашка на ней. -1 значит конец ролика. Вертикальный ролик для телефона
+// и горизонтальный для компьютера скомпонованы по-разному, поэтому кадры остановок у них свои.
+// fold: на узком экране плашка сворачивается до статусов, чтобы не закрывать оповещатель.
+const STOPS_V = [
   { t: 0, n: 1 }, { t: 1.7, n: 2 }, { t: 3.15, n: 3 }, { t: 4.6, n: 4 },
-  { t: 6.45, n: 4 }, { t: 8.4, n: 5 }, { t: 10.0, n: 6 }, { t: -1, n: 7 },
+  { t: 6.44, n: 4, fold: true }, { t: 8.4, n: 5 }, { t: 9.74, n: 6 }, { t: -1, n: 7 },
+];
+const STOPS_H = [
+  { t: 0, n: 1 }, { t: 1.7, n: 2 }, { t: 3.25, n: 3 }, { t: 4.6, n: 4 },
+  { t: 6.46, n: 4, fold: true }, { t: 8.4, n: 5 }, { t: 9.75, n: 6 }, { t: -1, n: 7 },
 ];
 
 const CAMS = [[0, 'CAM 01 · ФАСАД'], [1.0, 'CAM 02 · СЕРВЕРНАЯ'], [2.37, 'CAM 03 · ВХОД'], [3.5, 'CAM 04 · КОРИДОР'],
   [4.75, 'CAM 04 · ТРЕВОГА'], [6.85, 'CAM 05 · ПУЛЬТ'], [9.35, 'CAM 06 · ТЕЛЕФОН'], [10.75, 'CAM 07 · ФАСАД']];
 const ALARM = [4.75, 6.8];
 
-/* ---------- загрузка видео: лёгкая версия сразу, чёткая следом ---------- */
+/* ---------- загрузка: ролик сразу, запись задом наперёд следом ---------- */
 const MOBILE_MQ = matchMedia('(max-width: 900px), (orientation: portrait) and (pointer: coarse)');
+// ar: пропорции кадра; sign: где на кадре вывеска с логотипом (её закрывает последняя плашка)
 const SOURCES = {
-  desktop: { lite: { url: `${BASE}/assets/video/hero-lite.mp4`, bytes: 2527538 }, hd: { url: `${BASE}/assets/video/hero-hd.mp4`, bytes: 6280134 } },
-  mobile: { lite: { url: `${BASE}/assets/video/hero-m.mp4`, bytes: 3715000 }, hd: null },
+  // компьютер: ролик расширен до 16:9 (Higgsfield), плашки встают сбоку прямо на видео
+  desktop: {
+    fwd: { url: `${BASE}/assets/video/hero-d.mp4`, bytes: 6007402 },
+    rev: { url: `${BASE}/assets/video/hero-d-rev.mp4`, bytes: 5422154 },
+    ar: 16 / 9, fps: 24, sign: [0.49, 0.27], stops: STOPS_H,
+    sides: { 1: 'L', 2: 'R', 3: 'R', 4: 'L', 5: 'L', 6: 'R' }, // там, где кадр пустой
+  },
+  mobile: {
+    fwd: { url: `${BASE}/assets/video/hero-m.mp4`, bytes: 3715820 },
+    rev: { url: `${BASE}/assets/video/hero-m-rev.mp4`, bytes: 3763781 },
+    ar: 9 / 16, fps: 30, sign: [0.47, 0.275], stops: STOPS_V,
+  },
 };
+let SRC = MOBILE_MQ.matches ? SOURCES.mobile : SOURCES.desktop;
+let STOPS = SRC.stops;
+FPS = SRC.fps;
 const loadListeners = new Set();
-let netFrac = 0, videoStarted = false, videoOk = false, liteUrl = null;
+let netFrac = 0, videoStarted = false, videoOk = false, revOk = false;
 let resolveVideo;
 const videoReady = new Promise(r => { resolveVideo = r; });
-const loadedFraction = () => (scrubOn || beatsOn ? netFrac : 1);
+const loadedFraction = () => (beatsOn ? netFrac : 1);
 const notifyLoad = () => loadListeners.forEach(fn => fn());
 
 // Весь файл целиком в память: так перемотка работает на любом хостинге.
@@ -199,24 +216,27 @@ function attach(el, url) {
 }
 
 function startVideo() {
-  if (videoStarted || !vLite) return;
+  if (videoStarted || !vFwd) return;
   videoStarted = true;
-  const src = MOBILE_MQ.matches ? SOURCES.mobile : SOURCES.desktop;
-  fetchBlob(src.lite, f => { netFrac = f; notifyLoad(); })
-    .then(url => { liteUrl = url; return attach(vLite, url); })
+  SRC = MOBILE_MQ.matches ? SOURCES.mobile : SOURCES.desktop;
+  STOPS = SRC.stops;
+  FPS = SRC.fps;
+  fetchBlob(SRC.fwd, f => { netFrac = f; notifyLoad(); })
+    .then(url => attach(vFwd, url))
     .then(() => {
-      video = vLite;
-      DUR = vLite.duration || DUR;
+      DUR = vFwd.duration || DUR;
+      NF = Math.max(2, Math.round(DUR * FPS));
       videoOk = true;
       netFrac = 1;
       stage.classList.add('video-ready');
       notifyLoad();
       resolveVideo();
       if (beatsOn) jumpTo(stopTime(beatI));
-      else warmDecoder();
-      if (src.hd) fetchBlob(src.hd, null).then(upgradeTo).catch(() => { /* остаёмся на лёгкой */ });
+      if (!SRC.rev || !vRev) return null;
+      return fetchBlob(SRC.rev, null).then(url => attach(vRev, url)).then(() => { revOk = true; cueRev(); });
     })
     .catch(() => {
+      if (videoOk) return; // не загрузилась только запись задом наперёд: назад пойдёт пошаговой перемоткой
       stage.classList.add('video-failed');
       netFrac = 1;
       notifyLoad();
@@ -224,64 +244,46 @@ function startVideo() {
     });
 }
 
-// Подмена на чёткую версию: наводим её на тот же кадр и показываем, когда кадр готов.
-function upgradeTo(url) {
-  if (beatsOn) { URL.revokeObjectURL(url); return; }
-  attach(vHd, url).then(() => {
-    vHd.addEventListener('seeked', () => {
-      video = vHd;
-      stage.classList.add('hd');
-      seekBusy = false;
-      pendingTime = null;
-      if (scrubOn) { requestSeek(shown); drawAmb(true); }
-    }, { once: true });
-    try { vHd.currentTime = video.currentTime; } catch (e) { /* не страшно */ }
-  }).catch(() => { /* чёткая не завелась, остаёмся на лёгкой */ });
+/* ---------- кадры и две записи ---------- */
+const frameAt = t => clamp(Math.floor(t * FPS + 1e-4), 0, NF - 1);
+const tOf = i => (i + 0.5) / FPS;                  // середина кадра, чтобы не попасть на стык
+const mirror = t => tOf(NF - 1 - frameAt(t));      // тот же кадр в записи задом наперёд (и обратно)
+const stopTime = i => (STOPS[i].t < 0 ? tOf(NF - 1) : tOf(frameAt(STOPS[i].t)));
+// время прямого ролика, которое сейчас на экране
+const shownT = () => (video === vRev ? mirror(vRev.currentTime) : vFwd.currentTime);
+
+function show(el) {
+  if (video === el) return;
+  video = el;
+  stage.classList.toggle('rev', el === vRev);
+  drawAmb(true);
 }
 
-/* ---------- шлюз перемотки: новая перемотка только после готового кадра ---------- */
-let seekBusy = false, pendingTime = null, warming = false;
-const SEEK_MIN = (1 / 30) * 0.9;
-function requestSeek(t) {
-  if (!videoOk || !video.duration || warming) { pendingTime = t; return; }
-  t = clamp(t, 0, video.duration - 0.001);
-  if (Math.abs(t - video.currentTime) < SEEK_MIN) return;
-  if (seekBusy) { pendingTime = t; return; }
-  seekBusy = true;
-  try { video.currentTime = t; } catch (e) { seekBusy = false; }
+// Навести запись на время и дождаться, когда кадр готов к показу.
+function cueTo(el, t) {
+  return new Promise(res => {
+    if (Math.abs(el.currentTime - t) < 0.5 / FPS && !el.seeking) { res(); return; }
+    let done = false;
+    const ok = () => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      // кадр готов после seeked; сигнал о показе от закрытой записи может не прийти, поэтому есть запасной путь
+      let fin = false;
+      const end = () => { if (!fin) { fin = true; res(); } };
+      if (el.requestVideoFrameCallback) el.requestVideoFrameCallback(end);
+      requestAnimationFrame(() => requestAnimationFrame(end));
+    };
+    const timer = setTimeout(ok, 600);
+    el.addEventListener('seeked', ok, { once: true });
+    try { el.pause(); el.currentTime = t; } catch (e) { ok(); }
+  });
 }
-function onSeeked(e) {
-  if (e.target !== video || warming) return;
-  seekBusy = false;
-  drawAmb(false);
-  if (pendingTime !== null) { const t = pendingTime; pendingTime = null; requestSeek(t); }
-}
-[vLite, vHd].forEach(v => {
-  if (!v) return;
-  v.addEventListener('seeked', onSeeked);
-  v.addEventListener('error', () => { seekBusy = false; pendingTime = null; });
-});
-
-// Прогрев декодера, чтобы первая прокрутка не упиралась в холодный кадр.
-function warmDecoder() {
-  if (!video.duration) return;
-  const pts = [0.3, 0.65, 0.95];
-  let i = 0;
-  warming = true;
-  const next = () => {
-    if (i >= pts.length) {
-      warming = false;
-      seekBusy = false;
-      const t = pendingTime !== null ? pendingTime : target;
-      pendingTime = null;
-      requestSeek(t);
-      return;
-    }
-    const once = () => { video.removeEventListener('seeked', once); i++; next(); };
-    video.addEventListener('seeked', once);
-    try { video.currentTime = pts[i] * video.duration; } catch (e) { video.removeEventListener('seeked', once); i++; next(); }
-  };
-  next();
+// Запись задом наперёд заранее стоит на текущем кадре: ход назад начнётся без задержки.
+function cueRev() {
+  if (!revOk || video === vRev || moving) return;
+  const t = mirror(vFwd.currentTime);
+  if (Math.abs(vRev.currentTime - t) > 0.5 / FPS) { try { vRev.currentTime = t; } catch (e) { /* ещё грузится */ } }
 }
 
 // Мягкая подсветка по бокам (только на широком экране). Крошечный холст растягивается браузером,
@@ -300,35 +302,32 @@ function drawAmb(force) {
 }
 
 /* ---------- раскладка ---------- */
-let W = 0, H = 0, UH = 0, flank = false;
+let W = 0, H = 0, UH = 0, flank = false, wide = false;
 let box = { x: 0, y: 0, w: 0, h: 0 };
-let map = { s: 1, dw: 0, dh: 0, ox: 0, oy: 0 };
-let heroTop = 0, heroScroll = 1, heroEndY = 0;
-const safeProbe = mk('div');
-safeProbe.style.cssText = 'position:fixed;left:0;bottom:0;width:1px;height:env(safe-area-inset-bottom);visibility:hidden;pointer-events:none';
-body.appendChild(safeProbe);
+let map = { dw: 0, dh: 0, ox: 0, oy: 0 };
+let heroTop = 0, heroEndY = 0;
 
 function layout() {
   if (!stage) return;
-  hero.style.setProperty('--hero-h', `calc(${RANGE}vh + 100vh)`);
   W = stage.clientWidth;
   H = stage.clientHeight;
   UH = ui.clientHeight;
-  const fw = H * 9 / 16;
-  flank = W - fw >= 470;
+  const fw = H * SRC.ar;
+  flank = SRC.ar < 1 && W - fw >= 470;   // вертикальный кадр по центру, по бокам поля
+  wide = SRC.ar > 1 && W >= 760;          // горизонтальный кадр на весь экран
   stage.classList.toggle('is-flank', flank);
-  stage.classList.toggle('is-full', !flank);
+  stage.classList.toggle('is-wide', wide);
+  stage.classList.toggle('is-full', !flank && !wide);
   box = flank ? { x: Math.round((W - fw) / 2), y: 0, w: Math.round(fw), h: H } : { x: 0, y: 0, w: W, h: H };
   frameEl.style.left = box.x + 'px';
   frameEl.style.width = box.w + 'px';
-  const s = Math.max(box.w / SRC_W, box.h / SRC_H);
-  map = { s, dw: SRC_W * s, dh: SRC_H * s, ox: (box.w - SRC_W * s) / 2, oy: (box.h - SRC_H * s) / 2 };
+  // кадр вписан по принципу cover: где на экране окажется каждая точка ролика
+  const dw = Math.max(box.w, box.h * SRC.ar), dh = dw / SRC.ar;
+  map = { dw, dh, ox: (box.w - dw) / 2, oy: (box.h - dh) / 2 };
   placePlates();
   const r = hero.getBoundingClientRect();
   heroTop = r.top + scrollY;
-  heroScroll = Math.max(1, hero.offsetHeight - H);
   heroEndY = heroTop + hero.offsetHeight - H * 0.5;
-  PL.forEach(p => { p.op = -1; p.k = -1; });
   drawAmb(true);
 }
 
@@ -346,7 +345,6 @@ function fitTitle(el) {
 }
 
 function placePlates() {
-  const safeB = safeProbe.offsetHeight || 0;
   PL.forEach(p => {
     const el = p.el;
     if (!el) return;
@@ -357,16 +355,17 @@ function placePlates() {
       const avail = box.x - 36;
       pw = Math.min(440, avail - 36);
       if (pw < 330) { p.ov = Math.min(box.w * 0.2, 330 - pw); pw = Math.min(440, avail - 36 + p.ov); }
-    } else pw = Math.min(W - 24, 560);
+    } else if (wide) pw = clamp(W * 0.27, 340, 440);
+    else pw = Math.min(W - 24, 560);
     el.style.setProperty('--pw', Math.round(pw) + 'px');
     fitTitle(el);
     p.w = pw;
     p.h = el.offsetHeight;
     let x, y;
     if (p.side === 'C') {
-      // CTA встаёт точно поверх вывески на фасаде и закрывает её целиком
-      const cx = box.x + map.ox + 0.47 * map.dw;
-      const cy = box.y + map.oy + 0.275 * map.dh;
+      // последняя плашка встаёт точно поверх вывески на фасаде и закрывает её целиком
+      const cx = box.x + map.ox + SRC.sign[0] * map.dw;
+      const cy = box.y + map.oy + SRC.sign[1] * map.dh;
       x = clamp(cx - pw / 2, 12, W - pw - 12);
       y = clamp(cy - p.h / 2, 76, Math.max(76, UH - p.h - 20));
       el.style.setProperty('--ox', Math.round(cx - x) + 'px');
@@ -374,9 +373,16 @@ function placePlates() {
     } else if (flank) {
       x = p.side === 'L' ? box.x - 36 + p.ov - pw : box.x + box.w + 36 - p.ov;
       y = clamp(UH * p.vy - p.h / 2, 84, Math.max(84, UH - p.h - 28));
+    } else if (wide) {
+      // горизонтальный кадр: плашка сбоку прямо на видео, со стороны, где кадр пустой
+      const side = (SRC.sides && SRC.sides[p.n]) || p.side;
+      const m = Math.max(28, W * 0.045);
+      x = side === 'L' ? m : W - pw - m;
+      y = clamp(UH * p.vy - p.h / 2, 84, Math.max(84, UH - p.h - 28));
     } else {
+      // узкий экран: плашка прижата к низу через CSS, поэтому свёрнутая не повисает в воздухе
       x = (W - pw) / 2;
-      y = UH - p.h - 14 - safeB;
+      y = 0;
     }
     x = clamp(x, 12, Math.max(12, W - pw - 12));
     p.x = x;
@@ -390,7 +396,6 @@ function placePlates() {
 let osdLastT = 0, osdCamTxt = '', osdTcTxt = '', curT = 0, stAlarm = false;
 const statusRows = $$('#status li[data-at]');
 let tickEl = null; // ищем после разбивки заголовка на буквы
-let tickVal = -1;
 const pad = n => String(n).padStart(2, '0');
 function fmtTc(sec, fps) {
   const ff = Math.floor((sec % 1) * fps);
@@ -429,139 +434,140 @@ function paintState(t, force) {
   updateOsd(force);
 }
 
-/* ---------- компьютер: плашки по времени ролика ---------- */
-let loadK = 0;
-function bandOp(t, a, b, first, last) {
-  const F = Math.min(vh2s(RAMP_VH), (b - a) / 3);
-  return (first ? 1 : smooth(t, a, a + F)) * (last ? 1 : 1 - smooth(t, b - F, b));
-}
-function paintPlates(t) {
-  const kr = vh2s(KRAMP_VH);
-  for (const p of PL) {
-    if (!p.el) continue;
-    const op = bandOp(t, p.a, p.b, p.first, p.last) * (p.first ? loadK : 1);
-    let k = clamp((t - p.a) / kr, 0, 1);
-    if (p.first) k = Math.max(k, loadK);
-    const opR = Math.round(op * 1000) / 1000;
-    const kR = Math.round(k * 125) / 125;
-    if (opR !== p.op) {
-      p.el.style.opacity = opR;
-      p.op = opR;
-      const on = opR > 0.002;
-      if (on !== p.on) { p.on = on; p.el.classList.toggle('is-on', on); }
-    }
-    if (kR !== p.k) { p.el.style.setProperty('--k', kR); p.k = kR; }
-    if (p.n === 5 && tickEl) {
-      const val = Math.round(95 * easeOut(clamp((k - 0.08) / 0.7, 0, 1)));
-      if (val !== tickVal) { tickVal = val; tickEl.textContent = val; }
-    }
-  }
-  if (cue) cue.classList.toggle('is-on', introDone && t < vh2s(5));
-}
-function render(t) {
-  requestSeek(t);
-  paintPlates(t);
-  paintState(t, false);
-}
+/* ---------- остановки ---------- */
+let beatI = 0, moveId = 0, moving = false, beatRaf = 0, tickRun = 0;
+let beatsOn = false, heroVisible = true, introDone = false;
 
-/* ---------- компьютер: цикл догоняет прокрутку и засыпает ---------- */
-let target = 0, shown = 0, raf = 0, lastT = 0, animUntil = 0;
-let scrubOn = false, beatsOn = false, heroVisible = true, introDone = false;
-const SMOOTH = 0.135;
-const progress = () => clamp((scrollY - heroTop) / heroScroll, 0, 1) * DUR;
-
-function tick(now) {
-  const dt = Math.min(100, now - (lastT || now));
-  lastT = now;
-  shown += (target - shown) * (1 - Math.pow(1 - SMOOTH, dt / 16.667));
-  if (Math.abs(target - shown) < 0.003) shown = target;
-  render(shown);
-  if (shown !== target || now < animUntil) raf = requestAnimationFrame(tick);
-  else { raf = 0; lastT = 0; updateOsd(true); }
+// «95 камер»: число отсчитывается, когда плашка появляется
+function runTicker() {
+  if (!tickEl) return;
+  const run = ++tickRun, t0 = performance.now();
+  if (mqReduce.matches) { tickEl.textContent = '95'; return; }
+  const f = now => {
+    if (run !== tickRun) return;
+    const k = clamp((now - t0) / 1100, 0, 1);
+    tickEl.textContent = Math.round(95 * easeOut(k));
+    if (k < 1) requestAnimationFrame(f);
+  };
+  requestAnimationFrame(f);
 }
-function kick() { if (!raf && scrubOn && heroVisible) raf = requestAnimationFrame(tick); }
-function onScroll() { if (!scrubOn) return; target = progress(); kick(); }
-
-/* ---------- телефон: такты по свайпу ---------- */
-let beatI = 0, cancelMove = null, beatRaf = 0;
-const stopTime = i => (STOPS[i].t < 0 ? Math.max(0, DUR - 0.05) : STOPS[i].t);
 
 function paintBeat(i) {
-  const n = STOPS[i].n;
+  const s = STOPS[i];
   PL.forEach(p => {
     if (!p.el) return;
-    const on = p.n === n;
+    const on = p.n === s.n;
+    if (on && !p.on && p.n === 5) runTicker();
     p.on = on;
     p.el.classList.toggle('is-on', on);
+    p.el.classList.toggle('is-fold', on && !!s.fold);
     p.el.style.opacity = on ? 1 : 0;
     p.el.style.setProperty('--k', on ? 1 : 0);
-    p.op = on ? 1 : 0;
-    p.k = on ? 1 : 0;
-    if (on && p.n === 5 && tickEl) tickEl.textContent = '95';
   });
   if (cue) cue.classList.toggle('is-on', introDone && i === 0);
 }
 function stopBeatLoop() { if (beatRaf) { cancelAnimationFrame(beatRaf); beatRaf = 0; } }
 function jumpTo(t) {
-  try { video.pause(); video.currentTime = t; } catch (e) { /* ещё грузится */ }
+  moveId++;
+  moving = false;
+  try { vFwd.pause(); vFwd.currentTime = t; } catch (e) { /* ещё грузится */ }
+  show(vFwd);
   paintState(t, true);
+  cueRev();
 }
 
-// Вперёд ролик ПРОИГРЫВАЕТСЯ, а не перематывается: для декодера это штатный режим, картинка не дёргается.
-function playForward(to) {
-  const el = video;
-  if (!el.duration) return;
-  const span = Math.max(0.05, to - el.currentTime);
+// Проиграть запись el до времени toEl (в её собственном времени). toFwd переводит её время в время ролика.
+function playEl(el, toEl, toFwd, id, landed) {
+  const span = Math.max(0.05, toEl - el.currentTime);
   el.playbackRate = Math.min(4.5, Math.max(1, span / 0.85));
-  let fired = false, timer = null;
-  const finish = () => {
-    if (fired) return;
+  let fired = false;
+  const check = () => { if (el.currentTime >= toEl - 0.012) finish(); };
+  const timer = setTimeout(() => finish(), (span / el.playbackRate) * 1000 + 700);
+  function finish() {
+    if (fired || id !== moveId) return;
     fired = true;
     clearTimeout(timer);
     stopBeatLoop();
-    cancelMove = null;
+    el.removeEventListener('timeupdate', check);
     el.pause();
     el.playbackRate = 1;
-    try { el.currentTime = to; } catch (e) { /* ничего */ }
-    el.removeEventListener('timeupdate', check);
-    paintState(to, true);
-  };
-  const check = () => { if (el.currentTime >= to - 0.012) finish(); };
-  cancelMove = () => { fired = true; clearTimeout(timer); el.removeEventListener('timeupdate', check); };
+    try { el.currentTime = toEl; } catch (e) { /* ничего */ }
+    landed();
+  }
   el.addEventListener('timeupdate', check);
-  timer = setTimeout(finish, (span / el.playbackRate) * 1000 + 700);
-  if (el.paused) { const pr = el.play(); if (pr && pr.catch) pr.catch(finish); }
+  const pr = el.play();
+  if (pr && pr.catch) pr.catch(finish);
   if (el.requestVideoFrameCallback) {
-    const frame = () => { if (fired) return; if (el.currentTime >= to - 0.012) { finish(); return; } el.requestVideoFrameCallback(frame); };
+    const frame = () => { if (fired || id !== moveId) return; if (el.currentTime >= toEl - 0.012) { finish(); return; } el.requestVideoFrameCallback(frame); };
     el.requestVideoFrameCallback(frame);
   }
   const watch = () => {
-    if (fired) return;
-    paintState(el.currentTime, false);
-    if (el.currentTime >= to - 0.012) { finish(); return; }
+    if (fired || id !== moveId) return;
+    paintState(toFwd(el.currentTime), false);
+    drawAmb(false);
+    if (el.currentTime >= toEl - 0.012) { finish(); return; }
     beatRaf = requestAnimationFrame(watch);
   };
   watch();
 }
 
-// Назад проигрывать нельзя: короткая пошаговая перемотка, каждый шаг ждёт готовый кадр.
-function seekBack(to) {
-  const el = video;
-  if (!el.duration) return;
+// Вперёд: играет прямая запись.
+function moveFwd(to, id) {
+  const from = shownT();
+  const go = () => {
+    if (id !== moveId) return;
+    playEl(vFwd, to, t => t, id, () => {
+      moving = false;
+      paintState(to, true);
+      drawAmb(true);
+      cueRev();
+    });
+  };
+  if (video === vFwd) { go(); return; }
+  // на экране запись задом наперёд: прямую наводим на тот же кадр и незаметно подменяем
+  try { vRev.pause(); } catch (e) { /* ничего */ }
+  cueTo(vFwd, tOf(frameAt(from))).then(() => { if (id !== moveId) return; show(vFwd); go(); });
+}
+
+// Назад: играет запись задом наперёд, потом на остановке снова встаёт прямая.
+function moveBack(to, id) {
+  const from = shownT();
+  const go = () => {
+    if (id !== moveId) return;
+    playEl(vRev, mirror(to), mirror, id, () => {
+      paintState(to, true);
+      cueTo(vFwd, to).then(() => {
+        if (id !== moveId) return;
+        moving = false;
+        show(vFwd);
+        drawAmb(true);
+      });
+    });
+  };
+  try { vFwd.pause(); } catch (e) { /* ничего */ }
+  if (video === vRev) { go(); return; }
+  cueTo(vRev, mirror(from)).then(() => { if (id !== moveId) return; show(vRev); go(); });
+}
+
+// Запасной ход назад, пока запись задом наперёд не загрузилась: короткая пошаговая перемотка.
+function seekBack(to, id) {
+  const el = vFwd;
+  show(vFwd);
   el.pause();
   el.playbackRate = 1;
   const from = el.currentTime, STEPS = 9, PACE = 42;
-  let k = 0, dead = false, timer = null, lastAt = performance.now();
+  let k = 0, timer = null, lastAt = performance.now();
+  const alive = () => id === moveId;
   const land = () => {
-    if (dead) return;
-    cancelMove = null;
+    if (!alive()) return;
     el.removeEventListener('seeked', next);
     clearTimeout(timer);
+    moving = false;
     try { el.currentTime = to; } catch (e) { /* ничего */ }
     paintState(to, true);
   };
   const step = () => {
-    if (dead) return;
+    if (!alive()) { el.removeEventListener('seeked', next); return; }
     k++;
     if (k >= STEPS) { land(); return; }
     const e = 1 - Math.pow(1 - k / STEPS, 3);
@@ -572,12 +578,11 @@ function seekBack(to) {
     paintState(t, false);
   };
   function next() {
-    if (dead) return;
+    if (!alive()) { el.removeEventListener('seeked', next); return; }
     clearTimeout(timer);
     const w = PACE - (performance.now() - lastAt);
     if (w > 4) timer = setTimeout(step, w); else step();
   }
-  cancelMove = () => { dead = true; clearTimeout(timer); el.removeEventListener('seeked', next); };
   el.addEventListener('seeked', next);
   timer = setTimeout(next, 260);
   try { el.currentTime = from + (to - from) / STEPS; } catch (e) { land(); }
@@ -588,19 +593,38 @@ function goBeat(i) {
   const back = i < beatI;
   beatI = i;
   paintBeat(i);
-  if (cancelMove) { cancelMove(); cancelMove = null; }
   stopBeatLoop();
+  const id = ++moveId;
   if (!videoOk) return;
-  if (back) seekBack(stopTime(i)); else playForward(stopTime(i));
+  moving = true;
+  const to = stopTime(i);
+  if (!back) moveFwd(to, id);
+  else if (revOk) moveBack(to, id);
+  else seekBack(to, id);
 }
 
-let tY = 0, tActive = false, tDone = false;
-// Перехватываем палец, только когда герой стоит ровно в экране.
+// История кончилась: сами уводим страницу дальше, чтобы посетитель не упёрся в экран.
+let leavingUntil = 0;
+function leaveHero() {
+  leavingUntil = performance.now() + 900;
+  scrollTo({ top: hero.offsetTop + hero.offsetHeight, behavior: mqReduce.matches ? 'auto' : 'smooth' });
+}
+function step(down) {
+  if (down && beatI >= STOPS.length - 1) { leaveHero(); return; }
+  if (!down && beatI <= 0) return;
+  goBeat(beatI + (down ? 1 : -1));
+}
+
+// Управляем роликом, только когда герой стоит ровно в экране и открытого меню нет.
 const heroPinned = () => { const r = hero.getBoundingClientRect(); return r.top > -24 && r.top < 24; };
+const canDrive = () => introDone && heroPinned() && !root.classList.contains('is-locked');
+
+/* палец: один свайп = одна остановка */
+let tY = 0, tActive = false, tDone = false;
 function onTouchStart(e) {
   if (e.touches.length !== 1) return;
   tY = e.touches[0].clientY;
-  tActive = introDone && heroPinned();
+  tActive = canDrive();
   tDone = false;
 }
 function onTouchMove(e) {
@@ -612,74 +636,97 @@ function onTouchMove(e) {
   tDone = true;
   const up = dy > 0;
   if (up && beatI >= STOPS.length - 1) { tActive = false; leaveHero(); return; }
-  if (!up && beatI <= 0) return;
-  goBeat(beatI + (up ? 1 : -1));
+  step(up);
 }
 function onTouchEnd() { tActive = false; tDone = false; }
-// История кончилась: сами уводим страницу дальше, чтобы посетитель не упёрся в экран.
-function leaveHero() {
-  scrollTo({ top: hero.offsetTop + hero.offsetHeight, behavior: mqReduce.matches ? 'auto' : 'smooth' });
+
+/* колёсико и тачпад: один жест = одна остановка. Жест кончается паузой в 160 мс или сменой направления,
+   поэтому раскрученное колесо или инерция тачпада не проскакивают плашки. */
+let wLast = 0, wDir = 0, wAcc = 0, wUsed = false, wCapture = false, wLockUntil = 0;
+function onWheel(e) {
+  if (!beatsOn || e.ctrlKey) return; // ctrl + колесо оставляем браузеру для масштаба
+  const now = performance.now();
+  const dy = e.deltaY * (e.deltaMode === 1 ? 40 : e.deltaMode === 2 ? innerHeight : 1);
+  if (Math.abs(dy) < Math.abs(e.deltaX)) return; // горизонтальный жест не наш
+  const dir = Math.sign(dy) || wDir;
+  const gap = now - wLast;
+  wLast = now;
+  if (gap > 160 || dir !== wDir) {
+    wDir = dir;
+    wAcc = 0;
+    wUsed = false;
+    // жест, начатый при прокрутке страницы, доезжает сам и не листает ролик
+    wCapture = canDrive() && !(dir < 0 && beatI <= 0);
+  }
+  if (!wCapture) return;
+  e.preventDefault();
+  if (wUsed || now < leavingUntil) return;
+  wAcc += Math.abs(dy);
+  if (wAcc < 12 || now < wLockUntil) return;
+  wUsed = true;
+  wLockUntil = now + 380;
+  step(dir > 0);
 }
 
-/* ---------- режимы: компьютер, телефон или статичный герой ---------- */
-function enableScrub() {
-  if (scrubOn) return;
-  scrubOn = true;
-  hero.classList.remove('is-beats');
-  startVideo();
-  layout();
-  addEventListener('scroll', onScroll, { passive: true });
-  PL.forEach(p => { p.op = -1; p.k = -1; });
-  target = shown = progress();
-  render(shown);
+/* клавиатура: стрелки, PageUp и PageDown, пробел */
+function onKey(e) {
+  if (!beatsOn || e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return;
+  const k = e.key;
+  const fwd = k === 'ArrowDown' || k === 'PageDown' || (k === ' ' && !e.shiftKey);
+  const bwd = k === 'ArrowUp' || k === 'PageUp' || (k === ' ' && e.shiftKey);
+  if (!fwd && !bwd) return;
+  const tg = e.target;
+  if (tg && tg.closest && tg.closest('input, textarea, select, [contenteditable]')) return;
+  if (k === ' ' && tg && tg.closest && tg.closest('a, button')) return; // пробел нажимает кнопку
+  if (!canDrive() || (bwd && beatI <= 0)) return;
+  e.preventDefault();
+  if (e.repeat || performance.now() < leavingUntil) return;
+  step(fwd);
 }
-function disableScrub() {
-  if (!scrubOn) return;
-  scrubOn = false;
-  removeEventListener('scroll', onScroll);
-  if (raf) cancelAnimationFrame(raf);
-  raf = 0;
-}
+
+/* ---------- режимы: остановки или статичный герой ---------- */
 function enableBeats() {
   if (beatsOn) return;
   beatsOn = true;
   hero.classList.add('is-beats');
   startVideo();
   layout();
-  beatI = 0;
-  if (introDone) paintBeat(0);
-  if (videoOk) jumpTo(stopTime(0));
+  if (introDone) paintBeat(beatI);
+  if (videoOk) jumpTo(stopTime(beatI));
   stage.addEventListener('touchstart', onTouchStart, { passive: true });
   stage.addEventListener('touchmove', onTouchMove, { passive: false });
   stage.addEventListener('touchend', onTouchEnd, { passive: true });
-  if (cue) $('span', cue).textContent = 'Свайп вверх';
+  addEventListener('wheel', onWheel, { passive: false });
+  addEventListener('keydown', onKey);
+  if (cue) $('span', cue).textContent = MOBILE_MQ.matches ? 'Свайп вверх' : 'Листайте';
 }
 function disableBeats() {
   if (!beatsOn) return;
   beatsOn = false;
   hero.classList.remove('is-beats');
   stopBeatLoop();
-  if (cancelMove) { cancelMove(); cancelMove = null; }
-  try { video.pause(); video.playbackRate = 1; } catch (e) { /* ничего */ }
+  moveId++;
+  moving = false;
+  [vFwd, vRev].forEach(v => { try { v.pause(); v.playbackRate = 1; } catch (e) { /* ничего */ } });
   stage.removeEventListener('touchstart', onTouchStart);
   stage.removeEventListener('touchmove', onTouchMove);
   stage.removeEventListener('touchend', onTouchEnd);
-  if (cue) $('span', cue).textContent = 'Листайте';
+  removeEventListener('wheel', onWheel);
+  removeEventListener('keydown', onKey);
 }
 function clearPlates() {
   PL.forEach(p => {
     if (!p.el) return;
     p.el.style.removeProperty('opacity');
     p.el.style.removeProperty('--k');
-    p.el.classList.remove('is-on');
-    p.on = false; p.op = -1; p.k = -1;
+    p.el.classList.remove('is-on', 'is-fold');
+    p.on = false;
   });
   stage.classList.remove('is-alarm');
   stAlarm = false;
 }
 function applyMode() {
   if (staticWanted()) {
-    disableScrub();
     disableBeats();
     clearPlates();
     root.classList.add('is-static');
@@ -687,10 +734,8 @@ function applyMode() {
     return;
   }
   root.classList.remove('is-static');
-  if (MOBILE_MQ.matches) { disableScrub(); enableBeats(); }
-  else { disableBeats(); enableScrub(); }
+  enableBeats();
 }
-
 
 /* ---------- заставка ---------- */
 function scramble(node, dur) {
@@ -800,7 +845,7 @@ async function runIntro() {
 
   const minT = quick ? 1300 : 2700;
   const maxT = quick ? 3000 : 4600;
-  const ready = scrubOn || beatsOn ? videoReady : Promise.resolve();
+  const ready = beatsOn ? videoReady : Promise.resolve();
   await Promise.race([Promise.all([ready, wait(minT)]), wait(maxT), skipP]);
   evs.forEach(ev => removeEventListener(ev, onSkip));
   loadListeners.delete(upd);
@@ -829,17 +874,8 @@ async function runIntro() {
 }
 
 function afterIntro() {
-  const t0 = performance.now();
-  if (beatsOn) paintBeat(beatI);
-  animUntil = t0 + 1300;
-  const ramp = now => {
-    loadK = easeOut(clamp((now - t0) / 1150, 0, 1));
-    if (scrubOn) { render(shown); }
-    if (loadK < 1) requestAnimationFrame(ramp);
-  };
-  if (mqReduce.matches) loadK = 1; else requestAnimationFrame(ramp);
-  if (scrubOn || beatsOn) {
-    kick();
+  if (beatsOn) {
+    paintBeat(beatI);
     const updPill = () => {
       const p = Math.round(loadedFraction() * 100);
       loadPillRing.style.strokeDashoffset = 100 - p;
@@ -850,7 +886,8 @@ function afterIntro() {
     loadListeners.add(updPill);
     updPill();
   }
-  if (!beatsOn) setTimeout(showCookie, 1400);
+  // на телефоне плашка cookie ждёт конца ролика, на компьютере она сбоку и не мешает
+  if (!MOBILE_MQ.matches) setTimeout(showCookie, 1400);
 }
 
 /* ---------- шапка, меню, мобильная панель ---------- */
@@ -858,7 +895,7 @@ const nav = $('#nav');
 const mbar = $('#mbar');
 function onPageScroll() {
   const y = scrollY;
-  const pastHero = scrubOn ? y > heroTop + heroScroll - 4 : y > heroTop + hero.offsetHeight - 80;
+  const pastHero = y > heroTop + hero.offsetHeight - 80;
   nav.classList.toggle('is-solid', pastHero);
   const contact = $('#contact');
   const nearForm = contact && contact.getBoundingClientRect().top < innerHeight * 0.6 && contact.getBoundingClientRect().bottom > 0;
@@ -1346,7 +1383,6 @@ if (stage) {
   const heroIO = new IntersectionObserver(entries => {
     entries.forEach(en => {
       heroVisible = en.isIntersecting;
-      if (heroVisible) kick();
     });
   });
   heroIO.observe(stage);
@@ -1364,11 +1400,10 @@ addEventListener('resize', () => {
     if (innerWidth === lastW && Math.abs(innerHeight - lastH) < 120) return;
     lastW = innerWidth; lastH = innerHeight;
     layout();
-    if (scrubOn) { target = shown = progress(); render(shown); }
     if (tabs.length) selectTab(tabs.find(t => t.getAttribute('aria-selected') === 'true') || tabs[0]);
   }, 150);
 });
-if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { layout(); if (scrubOn) render(shown); });
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(layout);
 
 runIntro();
 onPageScroll();

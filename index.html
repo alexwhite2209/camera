@@ -20,7 +20,7 @@
 <link rel="preload" href="./assets/fonts/Tektur-500-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="./assets/img/logo-512.png" as="image">
 <link rel="stylesheet" href="./assets/css/fonts.css">
-<link rel="stylesheet" href="./assets/css/site.css?v=7e1c4797">
+<link rel="stylesheet" href="./assets/css/site.css?v=c5657908">
 <script>document.documentElement.className='js';</script>
 <noscript><style>.intro{display:none!important}.hero{height:auto!important}.stage{position:relative!important}.plate[data-plate="1"]{opacity:1!important;visibility:visible!important}</style></noscript>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"LocalBusiness","name":"АЙРИС","description":"Монтаж видеонаблюдения, СКУД, охранной и пожарной сигнализации и систем оповещения под ключ","url":"https://iriseye.ru/","image":"https://iriseye.ru/assets/img/og.jpg","logo":"https://iriseye.ru/assets/img/logo-512.png","telephone":"+79867484446","areaServed":"Нижегородская область","openingHours":"Mo-Su 08:00-19:00"}</script>
@@ -121,9 +121,9 @@
   <div class="stage is-full" id="stage">
     <canvas class="stage__amb" id="amb" width="8" height="14" aria-hidden="true"></canvas>
     <div class="stage__frame" id="frame" aria-hidden="true">
-      <img class="stage__poster" src="./assets/img/poster.jpg" alt="" decoding="async">
-      <video class="stage__v v-lite" id="vLite" muted playsinline preload="none" disablepictureinpicture tabindex="-1"></video>
-      <video class="stage__v v-hd" id="vHd" muted playsinline preload="none" disablepictureinpicture tabindex="-1"></video>
+      <picture><source media="(min-width: 901px) and (orientation: landscape), (min-width: 901px) and (pointer: fine)" srcset="./assets/img/poster-d.jpg"><img class="stage__poster" src="./assets/img/poster.jpg" alt="" decoding="async"></picture>
+      <video class="stage__v v-fwd" id="vFwd" muted playsinline preload="none" disablepictureinpicture tabindex="-1"></video>
+      <video class="stage__v v-rev" id="vRev" muted playsinline preload="none" disablepictureinpicture tabindex="-1"></video>
       <div class="stage__shade"></div>
       <div class="stage__alarm"></div>
       <div class="osd">
@@ -164,8 +164,10 @@
       <article class="plate plate--right plate--alarm" data-plate="4">
         <span class="trail" aria-hidden="true"><i></i></span>
         <p class="plate__kicker">03 · ПОЖАРНАЯ СИГНАЛИЗАЦИЯ И СОУЭ</p>
-        <h2 class="plate__title fx-punch">Узнаете первым</h2>
-        <p class="plate__text fx-sub">Датчики дыма и тепла замечают пожар в самом начале. Сирена и речевое оповещение включаются сразу.</p>
+        <div class="plate__fold"><div>
+          <h2 class="plate__title fx-punch">Узнаете первым</h2>
+          <p class="plate__text fx-sub">Датчики дыма и тепла замечают пожар в самом начале. Сирена и речевое оповещение включаются сразу.</p>
+        </div></div>
         <ul class="status fx-chips" id="status">
           <li data-at="4.35" data-on="тревога"><span>Дым</span><b>норма</b></li>
           <li><span>Тепло</span><b>норма</b></li>
@@ -388,10 +390,10 @@
         <fieldset class="step" data-step="svc">
           <legend><span class="step__n">2</span>Что нужно</legend>
           <div class="opts opts--2">
-            <label class="opt opt--check"><input type="checkbox" name="sys_cctv" checked><span>Камеры</span></label>
-            <label class="opt opt--check"><input type="checkbox" name="sys_access"><span>СКУД и домофон</span></label>
-                          <label class="opt opt--check" data-sys="fire"><input type="checkbox" name="sys_fire"><span>Пожарная сигнализация (АПС) <em>по смете</em></span></label>
-                          <label class="opt opt--check" data-sys="soue"><input type="checkbox" name="sys_soue"><span>Оповещение (СОУЭ) <em>по смете</em></span></label>
+            <label class="opt opt--check"><input type="checkbox" name="sys_cctv" checked><span><span class="opt__l">Камеры</span></span></label>
+            <label class="opt opt--check"><input type="checkbox" name="sys_access"><span><span class="opt__l">СКУД и домофон</span></span></label>
+                          <label class="opt opt--check" data-sys="fire"><input type="checkbox" name="sys_fire"><span><span class="opt__l">Пожарная сигнализация (АПС)</span><em>по смете</em></span></label>
+                          <label class="opt opt--check" data-sys="soue"><input type="checkbox" name="sys_soue"><span><span class="opt__l">Оповещение (СОУЭ)</span><em>по смете</em></span></label>
                       </div>
           <p class="step__hint" id="calcHint">Камеры и СКУД вместе дешевле на 20%</p>
         </fieldset>
@@ -407,9 +409,9 @@
         <fieldset class="step" data-step="opt">
           <legend><span class="step__n">4</span>Дополнительно</legend>
           <div class="opts opts--col">
-            <label class="opt opt--check"><input type="checkbox" name="remote" checked><span>Просмотр со смартфона <em>бесплатно</em></span></label>
-            <label class="opt opt--check" data-cam><input type="checkbox" name="night"><span>Цветное ночное видение <em>+6 000 ₽</em></span></label>
-            <label class="opt opt--check" data-cam><input type="checkbox" name="archive"><span>Архив больше 30 дней <em>+8 000 ₽</em></span></label>
+            <label class="opt opt--check"><input type="checkbox" name="remote" checked><span><span class="opt__l">Просмотр со смартфона</span><em>бесплатно</em></span></label>
+            <label class="opt opt--check" data-cam><input type="checkbox" name="night"><span><span class="opt__l">Цветное ночное видение</span><em>+6 000 ₽</em></span></label>
+            <label class="opt opt--check" data-cam><input type="checkbox" name="archive"><span><span class="opt__l">Архив больше 30 дней</span><em>+8 000 ₽</em></span></label>
           </div>
         </fieldset>
       </div>
@@ -740,6 +742,6 @@
   <p id="lbCap"></p>
 </dialog>
 
-<script src="./assets/js/site.js?v=6a0d437f" defer></script>
+<script src="./assets/js/site.js?v=684feb04" defer></script>
 </body>
 </html>

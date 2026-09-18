@@ -166,9 +166,9 @@ $icon = fn(string $name) => '<svg class="i" aria-hidden="true"><use href="#i-' .
   <div class="stage is-full" id="stage">
     <canvas class="stage__amb" id="amb" width="8" height="14" aria-hidden="true"></canvas>
     <div class="stage__frame" id="frame" aria-hidden="true">
-      <img class="stage__poster" src="<?= $bp ?>/assets/img/poster.jpg" alt="" decoding="async">
-      <video class="stage__v v-lite" id="vLite" muted playsinline preload="none" disablepictureinpicture tabindex="-1"></video>
-      <video class="stage__v v-hd" id="vHd" muted playsinline preload="none" disablepictureinpicture tabindex="-1"></video>
+      <picture><source media="(min-width: 901px) and (orientation: landscape), (min-width: 901px) and (pointer: fine)" srcset="<?= $bp ?>/assets/img/poster-d.jpg"><img class="stage__poster" src="<?= $bp ?>/assets/img/poster.jpg" alt="" decoding="async"></picture>
+      <video class="stage__v v-fwd" id="vFwd" muted playsinline preload="none" disablepictureinpicture tabindex="-1"></video>
+      <video class="stage__v v-rev" id="vRev" muted playsinline preload="none" disablepictureinpicture tabindex="-1"></video>
       <div class="stage__shade"></div>
       <div class="stage__alarm"></div>
       <div class="osd">
@@ -209,8 +209,10 @@ $icon = fn(string $name) => '<svg class="i" aria-hidden="true"><use href="#i-' .
       <article class="plate plate--right plate--alarm" data-plate="4">
         <span class="trail" aria-hidden="true"><i></i></span>
         <p class="plate__kicker">03 · ПОЖАРНАЯ СИГНАЛИЗАЦИЯ И СОУЭ</p>
-        <h2 class="plate__title fx-punch">Узнаете первым</h2>
-        <p class="plate__text fx-sub">Датчики дыма и тепла замечают пожар в самом начале. Сирена и речевое оповещение включаются сразу.</p>
+        <div class="plate__fold"><div>
+          <h2 class="plate__title fx-punch">Узнаете первым</h2>
+          <p class="plate__text fx-sub">Датчики дыма и тепла замечают пожар в самом начале. Сирена и речевое оповещение включаются сразу.</p>
+        </div></div>
         <ul class="status fx-chips" id="status">
           <li data-at="4.35" data-on="тревога"><span>Дым</span><b>норма</b></li>
           <li><span>Тепло</span><b>норма</b></li>
@@ -432,10 +434,10 @@ $icon = fn(string $name) => '<svg class="i" aria-hidden="true"><use href="#i-' .
         <fieldset class="step" data-step="svc">
           <legend><span class="step__n">2</span>Что нужно</legend>
           <div class="opts opts--2">
-            <label class="opt opt--check"><input type="checkbox" name="sys_cctv" checked><span>Камеры</span></label>
-            <label class="opt opt--check"><input type="checkbox" name="sys_access"><span>СКУД и домофон</span></label>
+            <label class="opt opt--check"><input type="checkbox" name="sys_cctv" checked><span><span class="opt__l">Камеры</span></span></label>
+            <label class="opt opt--check"><input type="checkbox" name="sys_access"><span><span class="opt__l">СКУД и домофон</span></span></label>
             <?php foreach (['fire' => 'Пожарная сигнализация (АПС)', 'soue' => 'Оповещение (СОУЭ)'] as $sys => $sysLabel): $v = (int)($prices[$sys]['house'] ?? 0); ?>
-              <label class="opt opt--check" data-sys="<?= $sys ?>"><input type="checkbox" name="sys_<?= $sys ?>"><span><?= e($sysLabel) ?> <em><?= $v > 0 ? 'от ' . number_format($v, 0, ',', ' ') . ' ₽' : 'по смете' ?></em></span></label>
+              <label class="opt opt--check" data-sys="<?= $sys ?>"><input type="checkbox" name="sys_<?= $sys ?>"><span><span class="opt__l"><?= e($sysLabel) ?></span><em><?= $v > 0 ? 'от ' . number_format($v, 0, ',', ' ') . ' ₽' : 'по смете' ?></em></span></label>
             <?php endforeach; ?>
           </div>
           <p class="step__hint" id="calcHint">Камеры и СКУД вместе дешевле на <?= (int)$prices['both_discount'] ?>%</p>
@@ -451,9 +453,9 @@ $icon = fn(string $name) => '<svg class="i" aria-hidden="true"><use href="#i-' .
         <fieldset class="step" data-step="opt">
           <legend><span class="step__n">4</span>Дополнительно</legend>
           <div class="opts opts--col">
-            <label class="opt opt--check"><input type="checkbox" name="remote" checked><span>Просмотр со смартфона <em>бесплатно</em></span></label>
-            <label class="opt opt--check" data-cam><input type="checkbox" name="night"><span>Цветное ночное видение <em>+<?= number_format((int)$prices['night'], 0, ',', ' ') ?> ₽</em></span></label>
-            <label class="opt opt--check" data-cam><input type="checkbox" name="archive"><span>Архив больше 30 дней <em>+<?= number_format((int)$prices['archive'], 0, ',', ' ') ?> ₽</em></span></label>
+            <label class="opt opt--check"><input type="checkbox" name="remote" checked><span><span class="opt__l">Просмотр со смартфона</span><em>бесплатно</em></span></label>
+            <label class="opt opt--check" data-cam><input type="checkbox" name="night"><span><span class="opt__l">Цветное ночное видение</span><em>+<?= number_format((int)$prices['night'], 0, ',', ' ') ?> ₽</em></span></label>
+            <label class="opt opt--check" data-cam><input type="checkbox" name="archive"><span><span class="opt__l">Архив больше 30 дней</span><em>+<?= number_format((int)$prices['archive'], 0, ',', ' ') ?> ₽</em></span></label>
           </div>
         </fieldset>
       </div>
