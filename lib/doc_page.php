@@ -28,7 +28,7 @@ $other = $kind === 'privacy' ? ['consent', 'Согласие на обработ
 <meta name="theme-color" content="#06080E">
 <link rel="icon" href="<?= $bp ?>/assets/img/favicon-64.png" type="image/png">
 <link rel="stylesheet" href="<?= $bp ?>/assets/css/fonts.css">
-<link rel="stylesheet" href="<?= $bp ?>/assets/css/site.css">
+<link rel="stylesheet" href="<?= $bp ?>/assets/css/site.css?v=<?= asset_ver('assets/css/site.css') ?>">
 </head>
 <body class="doc-page">
 <a class="skip" href="#main">Перейти к тексту</a>
@@ -46,7 +46,7 @@ $other = $kind === 'privacy' ? ['consent', 'Согласие на обработ
   <?php else: ?>
     <p>Документ не найден.</p>
   <?php endif; ?>
-  <p class="doc__see">Смотрите также: <a href="<?= $bp ?>/<?= $other[0] ?>"><?= e($other[1]) ?></a></p>
+  <p class="doc__see">Смотрите также: <a href="<?= page_url($other[0]) ?>"><?= e($other[1]) ?></a></p>
 </main>
 <footer class="doc-foot">
   <span>© <?= date('Y') ?> АЙРИС</span>

@@ -1210,9 +1210,11 @@ function leadText() {
   if (cm) lines.push('Комментарий: ' + cm);
   return lines.join('\n');
 }
-function showFail(msg) {
+function showFail(msg, title) {
   const text = leadText();
+  $('#failTitle').textContent = title || 'Не удалось отправить';
   $('#failText').textContent = msg || 'Отправьте ту же заявку в мессенджер, текст уже готов.';
+  $('#failRetry').textContent = CFG.static ? 'Изменить заявку' : 'Попробовать ещё раз';
   $('#failWa').href = `https://wa.me/${CFG.wa}?text=${encodeURIComponent(text)}`;
   form.hidden = true;
   const box = $('#formFail');
@@ -1230,6 +1232,8 @@ if (form) {
     const errs = validate();
     const first = ['name', 'phone', 'consent'].find(k => errs[k]);
     if (first) { ({ name: $('#fName'), phone: phoneIn, consent: $('#fConsent') })[first].focus(); return; }
+    // статическая копия без сервера: заявка уходит в мессенджер готовым текстом
+    if (CFG.static) { showFail('Выберите мессенджер: текст заявки уже готов, останется нажать «Отправить».', 'Остался один шаг'); return; }
     const btn = $('#leadSubmit');
     const label = $('span', btn);
     btn.disabled = true;

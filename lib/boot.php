@@ -15,7 +15,9 @@ function data_dir(): string
 {
     static $dir = null;
     if ($dir !== null) return $dir;
-    $candidates = [dirname(APP_ROOT) . DIRECTORY_SEPARATOR . 'iriseye-data', APP_ROOT . DIRECTORY_SEPARATOR . 'data'];
+    // своя папка задаётся окружением, например при сборке статической копии
+    $own = (string)getenv('IRIS_DATA_DIR');
+    $candidates = $own !== '' ? [$own] : [dirname(APP_ROOT) . DIRECTORY_SEPARATOR . 'iriseye-data', APP_ROOT . DIRECTORY_SEPARATOR . 'data'];
     foreach ($candidates as $c) {
         if (!is_dir($c)) @mkdir($c, 0750, true);
         if (is_dir($c) && is_writable($c)) {
@@ -163,11 +165,18 @@ function is_https(): bool
         || ((int)($_SERVER['SERVER_PORT'] ?? 0) === 443);
 }
 
-/** Путь сайта от корня домена ('' если сайт лежит в корне). */
+/** Сборка статической копии для хостинга без PHP (GitHub Pages): php lib/cli.php build-static */
+function is_static_build(): bool
+{
+    return getenv('IRIS_STATIC') === '1';
+}
+
+/** Путь сайта от корня домена ('' если сайт лежит в корне). В статической копии пути относительные. */
 function base_path(): string
 {
     static $bp = null;
     if ($bp !== null) return $bp;
+    if (is_static_build()) return $bp = '.';
     $doc = realpath($_SERVER['DOCUMENT_ROOT'] ?? '') ?: '';
     $bp = '';
     if ($doc && str_starts_with(APP_ROOT, $doc)) {
@@ -176,8 +185,22 @@ function base_path(): string
     return $bp = rtrim($bp, '/');
 }
 
+/** Адрес страницы документа: /privacy на хостинге, privacy.html в статической копии. */
+function page_url(string $name): string
+{
+    return base_path() . '/' . $name . (is_static_build() ? '.html' : '');
+}
+
+/** Метка версии файла по его содержимому, чтобы браузер не держал старый CSS и JS. */
+function asset_ver(string $rel): string
+{
+    $f = APP_ROOT . '/' . $rel;
+    return is_file($f) ? substr(md5_file($f), 0, 8) : APP_VERSION;
+}
+
 function site_url(): string
 {
+    if (is_static_build()) return 'https://iriseye.ru';
     $host = $_SERVER['HTTP_HOST'] ?? 'iriseye.ru';
     $host = preg_replace('/[^A-Za-z0-9.\-:\[\]]/', '', $host) ?: 'iriseye.ru';
     return (is_https() ? 'https' : 'http') . '://' . $host . base_path();

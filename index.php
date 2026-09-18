@@ -18,7 +18,8 @@ $waNum = preg_replace('/\D+/', '', (string)$c['whatsapp']);
 $tgNick = ltrim((string)$c['telegram'], '@');
 $wa    = 'https://wa.me/' . $waNum;
 $tg    = 'https://t.me/' . $tgNick;
-try { $token = form_token(); } catch (Throwable $e) { $token = ''; }
+$static = is_static_build();
+try { $token = $static ? '' : form_token(); } catch (Throwable $e) { $token = ''; }
 
 $cfg = [
     'prices'  => $prices,
@@ -27,6 +28,7 @@ $cfg = [
     'tg'      => $tgNick,
     'metrika' => 108236860,
     'base'    => $bp,
+    'static'  => $static,
 ];
 
 $ld = [
@@ -51,7 +53,8 @@ $icon = fn(string $name) => '<svg class="i" aria-hidden="true"><use href="#i-' .
 <title>АЙРИС: видеонаблюдение и СКУД под ключ в Нижнем Новгороде</title>
 <meta name="description" content="Подбираем, привозим, монтируем и настраиваем видеонаблюдение, СКУД, охранную и пожарную сигнализацию, системы оповещения. Больше 500 объектов, гарантия 2 года, выезд инженера за 24 часа. Нижний Новгород и область.">
 <meta name="theme-color" content="#06080E">
-<link rel="canonical" href="<?= e($site) ?>/">
+<?php if ($static): ?><meta name="robots" content="noindex, follow">
+<?php endif; ?><link rel="canonical" href="<?= e($site) ?>/">
 <meta property="og:type" content="website">
 <meta property="og:locale" content="ru_RU">
 <meta property="og:title" content="АЙРИС: видеонаблюдение и СКУД под ключ">
@@ -64,7 +67,7 @@ $icon = fn(string $name) => '<svg class="i" aria-hidden="true"><use href="#i-' .
 <link rel="preload" href="<?= $bp ?>/assets/fonts/Tektur-500-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="<?= $bp ?>/assets/img/logo-512.png" as="image">
 <link rel="stylesheet" href="<?= $bp ?>/assets/css/fonts.css">
-<link rel="stylesheet" href="<?= $bp ?>/assets/css/site.css?v=<?= APP_VERSION ?>">
+<link rel="stylesheet" href="<?= $bp ?>/assets/css/site.css?v=<?= asset_ver('assets/css/site.css') ?>">
 <script>document.documentElement.className='js';</script>
 <noscript><style>.intro{display:none!important}.hero{height:auto!important}.stage{position:relative!important}.plate[data-plate="1"]{opacity:1!important;visibility:visible!important}</style></noscript>
 <script type="application/ld+json"><?= json_encode($ld, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG) ?></script>
@@ -591,12 +594,12 @@ $icon = fn(string $name) => '<svg class="i" aria-hidden="true"><use href="#i-' .
           <label class="check">
             <input type="checkbox" name="consent" id="fConsent" aria-describedby="eConsent">
             <span class="check__box" aria-hidden="true"><?= $icon('check') ?></span>
-            <span>Я даю <a href="<?= $bp ?>/consent" target="_blank">согласие на обработку персональных данных</a></span>
+            <span>Я даю <a href="<?= page_url('consent') ?>" target="_blank">согласие на обработку персональных данных</a></span>
           </label>
           <p class="err" id="eConsent" role="alert"></p>
         </div>
         <button class="btn btn--primary btn--block btn--arrow" type="submit" id="leadSubmit"><span>Отправить заявку</span><?= $icon('arrow') ?></button>
-        <p class="form-note">Перезвоним в рабочее время. Подробнее в <a href="<?= $bp ?>/privacy" target="_blank">Политике обработки персональных данных</a>.</p>
+        <p class="form-note">Перезвоним в рабочее время. Подробнее в <a href="<?= page_url('privacy') ?>" target="_blank">Политике обработки персональных данных</a>.</p>
       </form>
 
       <div class="form-state form-state--ok" id="formOk" hidden tabindex="-1">
@@ -605,7 +608,7 @@ $icon = fn(string $name) => '<svg class="i" aria-hidden="true"><use href="#i-' .
         <p>Перезвоним <?= e(mb_strtolower($c['hours'])) ?>. Если срочно, звоните: <a href="<?= e($tel) ?>"><?= e($phone) ?></a></p>
       </div>
       <div class="form-state form-state--fail" id="formFail" hidden tabindex="-1">
-        <h3>Не удалось отправить</h3>
+        <h3 id="failTitle">Не удалось отправить</h3>
         <p id="failText">Отправьте ту же заявку в мессенджер, текст уже готов.</p>
         <div class="contact__msg">
           <a class="btn btn--primary" id="failWa" href="<?= e($wa) ?>" target="_blank" rel="noopener"><?= $icon('wa') ?>WhatsApp</a>
@@ -631,8 +634,8 @@ $icon = fn(string $name) => '<svg class="i" aria-hidden="true"><use href="#i-' .
       <p class="foot__msg"><a href="<?= e($wa) ?>" target="_blank" rel="noopener">WhatsApp</a> · <a href="<?= e($tg) ?>" target="_blank" rel="noopener">Telegram</a></p>
     </div>
     <div class="foot__col">
-      <a href="<?= $bp ?>/privacy">Политика обработки персональных данных</a>
-      <a href="<?= $bp ?>/consent">Согласие на обработку персональных данных</a>
+      <a href="<?= page_url('privacy') ?>">Политика обработки персональных данных</a>
+      <a href="<?= page_url('consent') ?>">Согласие на обработку персональных данных</a>
       <p class="foot__copy">© <?= date('Y') ?> АЙРИС</p>
     </div>
   </div>
@@ -645,7 +648,7 @@ $icon = fn(string $name) => '<svg class="i" aria-hidden="true"><use href="#i-' .
 </nav>
 
 <div class="cookie" id="cookie" role="dialog" aria-live="polite" aria-label="Cookie и Яндекс Метрика" hidden>
-  <p>Сайт использует cookie и Яндекс Метрику, чтобы понимать, чем он удобен. Метрика включится, только если вы согласны. <a href="<?= $bp ?>/privacy">Подробнее</a></p>
+  <p>Сайт использует cookie и Яндекс Метрику, чтобы понимать, чем он удобен. Метрика включится, только если вы согласны. <a href="<?= page_url('privacy') ?>">Подробнее</a></p>
   <div class="cookie__btns">
     <button class="btn btn--primary btn--sm" type="button" id="cookieYes">Согласен</button>
     <button class="btn btn--ghost btn--sm" type="button" id="cookieNo">Отказаться</button>
@@ -654,10 +657,10 @@ $icon = fn(string $name) => '<svg class="i" aria-hidden="true"><use href="#i-' .
 
 <dialog class="lb" id="lb" aria-label="Фото объекта">
   <button class="lb__x" type="button" aria-label="Закрыть"><?= $icon('x') ?></button>
-  <img id="lbImg" src="" alt="">
+  <img id="lbImg" alt="">
   <p id="lbCap"></p>
 </dialog>
 
-<script src="<?= $bp ?>/assets/js/site.js?v=<?= APP_VERSION ?>" defer></script>
+<script src="<?= $bp ?>/assets/js/site.js?v=<?= asset_ver('assets/js/site.js') ?>" defer></script>
 </body>
 </html>

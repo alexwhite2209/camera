@@ -12,6 +12,9 @@ AddDefaultCharset UTF-8
   # короткие адреса документов
   RewriteRule ^privacy/?$ privacy.php [L]
   RewriteRule ^consent/?$ consent.php [L]
+  # статическая копия для GitHub Pages: здесь вместо неё живые страницы
+  RewriteRule ^index\.html$ index.php [L]
+  RewriteRule ^(privacy|consent)\.html$ $1.php [L]
   # служебное закрыто
   RewriteRule ^(lib|data|dev)(/|$) - [F,L]
   RewriteRule \.(sqlite|sqlite-wal|sqlite-shm|key|log|md)$ - [F,L]

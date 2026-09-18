@@ -145,10 +145,10 @@ body.is-intro .nav{opacity:0;pointer-events:none}
 
 /* ---------- герой ---------- */
 .hero{position:relative;height:var(--hero-h,1050vh)}
-.stage{position:sticky;top:0;height:100vh;height:100lvh;overflow:hidden;isolation:isolate;background:#04060B}
+.stage{position:sticky;top:0;height:100vh;height:100lvh;overflow:hidden;overflow:clip;isolation:isolate;background:#04060B}
 .stage__amb{position:absolute;inset:-8%;width:116%;height:116%;max-width:none;opacity:0;transition:opacity 1s}
 .stage.is-flank .stage__amb{opacity:1}
-.stage__frame{position:absolute;left:0;top:0;width:100%;height:100%;overflow:hidden;background:#05070C}
+.stage__frame{position:absolute;left:0;top:0;width:100%;height:100%;overflow:hidden;overflow:clip;background:#05070C}
 .stage.is-flank .stage__frame{box-shadow:0 0 0 1px rgba(140,160,220,.14),0 40px 140px rgba(0,0,0,.65)}
 .stage__poster{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .stage__v{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .7s}
@@ -285,7 +285,7 @@ body.is-intro .nav{opacity:0;pointer-events:none}
 .svc__tab{position:relative;display:flex;align-items:center;gap:14px;min-height:58px;padding:0 18px;border-radius:12px;text-align:left;font:500 16px/1.2 var(--f-b);color:var(--tx-2);border:1px solid var(--line);transition:color .3s}
 .svc__tab[aria-selected="true"]{color:var(--tx);border-color:transparent}
 .svc__tab .n{font:500 12px/1 var(--f-m);color:var(--hud)}
-.svc__card{position:relative;overflow:hidden;border-radius:20px;border:1px solid var(--line);background:linear-gradient(160deg,rgba(18,24,42,.75),rgba(8,11,22,.75))}
+.svc__card{position:relative;overflow:hidden;overflow:clip;border-radius:20px;border:1px solid var(--line);background:linear-gradient(160deg,rgba(18,24,42,.75),rgba(8,11,22,.75))}
 .svc__pan{position:relative;display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr);gap:30px;padding:22px}
 .svc__pan[hidden]{display:none}
 .svc__pan.is-enter{animation:panIn .7s var(--ease-out)}
@@ -345,7 +345,7 @@ body.is-intro .nav{opacity:0;pointer-events:none}
 .opt--check input:checked+span::before{background:var(--a1) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/13px no-repeat;border-color:var(--a1)}
 .opt--check em{margin-left:auto}
 .opt.is-off{opacity:.38;pointer-events:none}
-.calc__res{position:sticky;top:92px;overflow:hidden;padding:28px 26px 26px;border-radius:20px;text-align:center;background:linear-gradient(165deg,#111A36,#0A0F1F);border:1px solid rgba(110,124,255,.38)}
+.calc__res{position:sticky;top:92px;overflow:hidden;overflow:clip;padding:28px 26px 26px;border-radius:20px;text-align:center;background:linear-gradient(165deg,#111A36,#0A0F1F);border:1px solid rgba(110,124,255,.38)}
 .calc__iris{width:118px;height:118px;margin:0 auto 14px}
 .calc__iris circle{fill:none}
 .calc__iris .t{stroke:rgba(140,160,220,.18);stroke-width:2}
@@ -367,7 +367,7 @@ body.is-intro .nav{opacity:0;pointer-events:none}
 
 /* объекты */
 .works__grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-rows:clamp(190px,21vw,300px);gap:14px;margin-top:48px}
-.work{position:relative;overflow:hidden;border-radius:16px;background:#0B1020}
+.work{position:relative;overflow:hidden;overflow:clip;border-radius:16px;background:#0B1020}
 .work:first-child{grid-column:span 2;grid-row:span 2}
 .work::before,.work::after{content:"";position:absolute;left:0;right:0;height:50.5%;z-index:3;background:#0B1020;transition:transform 1.15s var(--ease-io);transition-delay:calc(var(--i,0)*90ms + 200ms);pointer-events:none}
 .work::before{top:0}
@@ -418,7 +418,7 @@ body.is-intro .nav{opacity:0;pointer-events:none}
 .contact__phone:hover{color:var(--hud)}
 .contact__hours{color:var(--tx-3)}
 .contact__msg{display:flex;flex-wrap:wrap;gap:10px;margin-top:26px}
-.formcard{position:relative;overflow:hidden;padding:30px;border-radius:22px;border:1px solid var(--line);background:linear-gradient(165deg,rgba(18,24,42,.88),rgba(8,11,22,.88))}
+.formcard{position:relative;overflow:hidden;overflow:clip;padding:30px;border-radius:22px;border:1px solid var(--line);background:linear-gradient(165deg,rgba(18,24,42,.88),rgba(8,11,22,.88))}
 .lead-form{position:relative}
 .field{margin:0 0 16px}
 .field>label:not(.check){display:block;margin:0 0 8px;font:500 13px/1 var(--f-b);color:var(--tx-2)}
