@@ -1,0 +1,16 @@
+# Данные сайта: база заявок, секретный ключ, сессии, загруженные фото.
+# Они живут в папке iriseye-data рядом с сайтом и в репозиторий не попадают никогда.
+data/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+*.key
+sessions/
+
+# Мусор системы и редакторов
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+*.log
