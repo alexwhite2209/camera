@@ -169,7 +169,6 @@ $icon = fn(string $name) => '<svg class="i" aria-hidden="true"><use href="#i-' .
       <picture><source media="(min-width: 901px) and (orientation: landscape), (min-width: 901px) and (pointer: fine)" srcset="<?= $bp ?>/assets/img/poster-d.jpg"><img class="stage__poster" src="<?= $bp ?>/assets/img/poster.jpg" alt="" decoding="async"></picture>
       <video class="stage__v v-fwd" id="vFwd" muted playsinline preload="none" disablepictureinpicture tabindex="-1"></video>
       <video class="stage__v v-rev" id="vRev" muted playsinline preload="none" disablepictureinpicture tabindex="-1"></video>
-      <img class="stage__still" id="still" alt="" decoding="async">
       <div class="stage__shade"></div>
       <div class="stage__alarm"></div>
       <div class="osd">
@@ -291,7 +290,7 @@ $icon = fn(string $name) => '<svg class="i" aria-hidden="true"><use href="#i-' .
       <div class="svc__card" id="svcCard">
         <span class="spot" aria-hidden="true"></span>
         <div class="svc__pan" role="tabpanel" id="pan-video" aria-labelledby="tab-video">
-          <figure class="svc__img"><img src="<?= $bp ?>/assets/img/svc-video.jpg" alt="Стойка с регистратором и экранами камер" loading="lazy" width="900" height="1125"></figure>
+          <figure class="svc__img"><img src="<?= $bp ?>/assets/img/svc-cctv.jpg" alt="Монитор охраны: восемь камер объекта, рядом клавиатура и джойстик" loading="lazy" width="900" height="1125"></figure>
           <div class="svc__body">
             <p class="svc__desc">Камеры для дома, офиса, склада и производства. Смотрите их со смартфона в любое время.</p>
             <p class="mini">Что входит</p>
