@@ -89,7 +89,7 @@ $icon = fn(string $name) => '<svg class="i" aria-hidden="true"><use href="#i-' .
 
 <div class="env" aria-hidden="true">
   <div class="env__glow"></div>
-  <div class="env__dots"></div>
+  <canvas class="env__drift" id="drift"></canvas>
   <div class="env__scan"></div>
   <div class="env__grain"></div>
 </div>
@@ -217,7 +217,7 @@ $icon = fn(string $name) => '<svg class="i" aria-hidden="true"><use href="#i-' .
           <li data-at="4.35" data-on="тревога"><span>Дым</span><b>норма</b></li>
           <li><span>Тепло</span><b>норма</b></li>
           <li data-at="6.25" data-on="включена" data-off="ждёт"><span>Сирена</span><b>ждёт</b></li>
-          <li data-at="6.4" data-on="идёт" data-off="ждёт"><span>Оповещение</span><b>ждёт</b></li>
+          <li data-at="6.3" data-on="идёт" data-off="ждёт"><span>Оповещение</span><b>ждёт</b></li>
         </ul>
       </article>
 

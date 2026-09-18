@@ -580,3 +580,10 @@ html.is-static .plate__static-cta{display:flex;flex-wrap:wrap;gap:10px;margin-to
 
 /* прозрачная шапка над светлыми кадрами ролика: лёгкая тень, чтобы пункты читались */
 .nav:not(.is-solid) .nav__links a,.nav:not(.is-solid) .nav__phone,.nav:not(.is-solid) .nav__word{text-shadow:0 1px 3px rgba(0,0,0,.75),0 0 12px rgba(0,0,0,.45)}
+
+/* фон под роликом: холст с частицами (Particle Drift), проявляется, когда под роликом видна страница */
+.env__drift{position:absolute;inset:0;width:100%;height:100%;opacity:0;transition:opacity 1.2s var(--ease-out)}
+.env__drift.is-on{opacity:.9}
+
+/* телефон: на первом кадре только ролик, заголовок остаётся для поисковиков и экранных дикторов */
+html:not(.is-static) .stage.is-full .plate[data-plate="1"]{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0 0 0 0);clip-path:inset(50%);border:0!important;white-space:nowrap}

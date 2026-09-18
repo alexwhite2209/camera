@@ -139,11 +139,11 @@ const PL = [
 // fold: на узком экране плашка сворачивается до статусов, чтобы не закрывать оповещатель.
 const STOPS_V = [
   { t: 0, n: 1 }, { t: 1.7, n: 2 }, { t: 3.15, n: 3 }, { t: 4.6, n: 4 },
-  { t: 6.44, n: 4, fold: true }, { t: 8.4, n: 5 }, { t: 9.74, n: 6 }, { t: -1, n: 7 },
+  { t: 6.34, n: 4, fold: true }, { t: 8.4, n: 5 }, { t: 9.74, n: 6 }, { t: -1, n: 7 },
 ];
 const STOPS_H = [
-  { t: 0, n: 1 }, { t: 1.7, n: 2 }, { t: 3.25, n: 3 }, { t: 4.6, n: 4 },
-  { t: 6.46, n: 4, fold: true }, { t: 8.4, n: 5 }, { t: 9.75, n: 6 }, { t: -1, n: 7 },
+  { t: 0, n: 1 }, { t: 1.7, n: 2 }, { t: 3.17, n: 3 }, { t: 4.6, n: 4 },
+  { t: 6.38, n: 4, fold: true }, { t: 8.4, n: 5 }, { t: 9.75, n: 6 }, { t: -1, n: 7 },
 ];
 
 const CAMS = [[0, 'CAM 01 · ФАСАД'], [1.0, 'CAM 02 · СЕРВЕРНАЯ'], [2.37, 'CAM 03 · ВХОД'], [3.5, 'CAM 04 · КОРИДОР'],
@@ -1371,6 +1371,117 @@ document.addEventListener('click', e => {
   else if (h.includes('wa.me')) goal('wa_click');
   else if (h.includes('t.me')) goal('tg_click');
 });
+
+/* ---------- фон под роликом: символы плывут вниз, лучи идут вверх ----------
+   Перенос Particle Drift с 21st.dev на чистый холст. Работает, только когда под роликом видна страница:
+   пока ролик на весь экран, холст спит и не мешает видео. */
+(() => {
+  const cv = $('#drift');
+  if (!cv || !cv.getContext) return;
+  const ctx = cv.getContext('2d');
+  const CH = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ@#$%&*()'.split('');
+  const pick = () => CH[(Math.random() * CH.length) | 0];
+  const mouse = { x: -1000, y: -1000 };
+  let w = 0, h = 0, nodes = [], beams = [], raf = 0, last = 0, below = false;
+
+  function size() {
+    w = innerWidth;
+    h = innerHeight;
+    const dpr = Math.min(2, devicePixelRatio || 1);
+    cv.width = Math.round(w * dpr);
+    cv.height = Math.round(h * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  function seed() {
+    // на маленьком экране частиц меньше, на большом чуть больше
+    const k = clamp((w * h) / (1440 * 900), 0.45, 1.3);
+    nodes = Array.from({ length: Math.round(90 * k) }, () => ({ x: Math.random() * w, y: Math.random() * h, vy: Math.random() * 0.4 + 0.1, ch: pick() }));
+    beams = Array.from({ length: Math.round(25 * k) }, () => ({ x: Math.random() * w, y: Math.random() * h, len: Math.random() * 100 + 50, sp: Math.random() * 6 + 3, op: Math.random() * 0.5 + 0.3 }));
+  }
+  function draw(k) {
+    ctx.clearRect(0, 0, w, h);
+    // лучи снизу вверх
+    ctx.lineWidth = 1.5;
+    for (const b of beams) {
+      b.y -= b.sp * k;
+      if (b.y + b.len < 0) { b.y = h + 100; b.x = Math.random() * w; }
+      const g = ctx.createLinearGradient(b.x, b.y, b.x, b.y + b.len);
+      g.addColorStop(0, `rgba(96,165,250,${b.op})`);
+      g.addColorStop(1, 'rgba(96,165,250,0)');
+      ctx.strokeStyle = g;
+      ctx.beginPath();
+      ctx.moveTo(b.x, b.y);
+      ctx.lineTo(b.x, b.y + b.len);
+      ctx.stroke();
+    }
+    // тонкие линии между соседними символами
+    ctx.lineWidth = 0.5;
+    for (let i = 0; i < nodes.length; i++) {
+      const a = nodes[i];
+      for (let j = i + 1; j < nodes.length; j++) {
+        const b = nodes[j];
+        const d = Math.hypot(a.x - b.x, a.y - b.y);
+        if (d < 120) {
+          ctx.strokeStyle = `rgba(156,163,175,${0.15 * (1 - d / 120)})`;
+          ctx.beginPath();
+          ctx.moveTo(a.x, a.y);
+          ctx.lineTo(b.x, b.y);
+          ctx.stroke();
+        }
+      }
+    }
+    // символы: медленно плывут вниз, у курсора загораются и тянутся к нему
+    ctx.font = '12px "JetBrains Mono", monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (const n of nodes) {
+      n.y += n.vy * k;
+      if (n.y > h + 20) { n.y = -20; n.x = Math.random() * w; }
+      const d = Math.hypot(mouse.x - n.x, mouse.y - n.y);
+      if (d < 180 || Math.random() > 0.98) n.ch = pick();
+      if (d < 180) {
+        ctx.strokeStyle = `rgba(96,165,250,${0.5 * (1 - d / 180)})`;
+        ctx.beginPath();
+        ctx.moveTo(n.x, n.y);
+        ctx.lineTo(mouse.x, mouse.y);
+        ctx.stroke();
+      }
+      ctx.fillStyle = d < 180 ? '#60A5FA' : 'rgba(156,163,175,0.4)';
+      ctx.fillText(n.ch, n.x, n.y);
+    }
+  }
+  function loop(now) {
+    // скорость по времени, а не по кадрам: на экране 144 Гц всё движется так же, как на 60 Гц
+    const k = Math.min(3, (now - (last || now)) / 16.667);
+    last = now;
+    draw(k);
+    raf = requestAnimationFrame(loop);
+  }
+  function update() {
+    const run = below && !document.hidden && !mqReduce.matches;
+    cv.classList.toggle('is-on', below);
+    if (run && !raf) { last = 0; raf = requestAnimationFrame(loop); }
+    if (!run && raf) { cancelAnimationFrame(raf); raf = 0; }
+    // без движения: один неподвижный кадр
+    if (below && mqReduce.matches) draw(0);
+  }
+
+  size();
+  seed();
+  // под роликом видна страница, когда герой занимает меньше 95% экрана
+  const heroEl = $('#hero');
+  if (heroEl) {
+    new IntersectionObserver(en => { below = en[0].intersectionRatio < 0.95; update(); },
+      { threshold: [0, 0.95, 1] }).observe(heroEl);
+  } else { below = true; }
+  addEventListener('pointermove', e => { mouse.x = e.clientX; mouse.y = e.clientY; }, { passive: true });
+  document.addEventListener('pointerleave', () => { mouse.x = mouse.y = -1000; });
+  let rt = 0;
+  addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { const ow = w; size(); if (Math.abs(w - ow) > 80) seed(); if (!raf && below) draw(0); }, 150); });
+  document.addEventListener('visibilitychange', update);
+  if (mqReduce.addEventListener) mqReduce.addEventListener('change', update);
+  update();
+})();
 
 /* ---------- пауза анимаций на скрытой вкладке ---------- */
 document.addEventListener('visibilitychange', () => body.classList.toggle('paused', document.hidden));
