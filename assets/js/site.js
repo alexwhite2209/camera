@@ -107,6 +107,7 @@ const stage = $('#stage');
 const frameEl = $('#frame');
 const vFwd = $('#vFwd');
 const vRev = $('#vRev');
+const stillEl = $('#still');
 let video = vFwd;             // какая из двух записей сейчас на экране
 const amb = $('#amb');
 const actx = amb ? amb.getContext('2d', { alpha: false }) : null;
@@ -139,7 +140,7 @@ const PL = [
 // fold: на узком экране плашка сворачивается до статусов, чтобы не закрывать оповещатель.
 const STOPS_V = [
   { t: 0, n: 1 }, { t: 1.7, n: 2 }, { t: 3.15, n: 3 }, { t: 4.6, n: 4 },
-  { t: 6.34, n: 4, fold: true }, { t: 8.4, n: 5 }, { t: 9.74, n: 6 }, { t: -1, n: 7 },
+  { t: 6.34, n: 4, fold: true, still: 'assets/img/still-soue-m.webp' }, { t: 8.4, n: 5 }, { t: 9.74, n: 6 }, { t: -1, n: 7 },
 ];
 const STOPS_H = [
   { t: 0, n: 1 }, { t: 1.7, n: 2 }, { t: 3.17, n: 3 }, { t: 4.6, n: 4 },
@@ -233,7 +234,7 @@ function startVideo() {
       resolveVideo();
       if (beatsOn) jumpTo(stopTime(beatI));
       if (!SRC.rev || !vRev) return null;
-      return fetchBlob(SRC.rev, null).then(url => attach(vRev, url)).then(() => { revOk = true; cueRev(); });
+      return fetchBlob(SRC.rev, null).then(url => attach(vRev, url)).then(() => { revOk = true; cueRev(); loadStills(); });
     })
     .catch(() => {
       if (videoOk) return; // не загрузилась только запись задом наперёд: назад пойдёт пошаговой перемоткой
@@ -243,6 +244,29 @@ function startVideo() {
       resolveVideo();
     });
 }
+
+/* ---------- улучшенные снимки остановок ----------
+   На паузе видно, что кадр мягкий: камера в этот момент движется. Для таких остановок есть резкий снимок
+   того же кадра (улучшен в Higgsfield). Он проявляется поверх паузы и гаснет, как только ролик поехал. */
+const stills = {};
+function loadStills() {
+  STOPS.forEach(s => {
+    if (!s.still || stills[s.still]) return;
+    const im = new Image();
+    im.decoding = 'async';
+    im.src = `${BASE}/${s.still}`;
+    stills[s.still] = im;
+  });
+}
+function showStill(i) {
+  if (!stillEl) return;
+  const s = STOPS[i] && STOPS[i].still;
+  const im = s && stills[s];
+  if (!im || !im.complete || !im.naturalWidth) { stillEl.classList.remove('is-on'); return; }
+  if (stillEl.getAttribute('src') !== im.src) stillEl.src = im.src;
+  stillEl.classList.add('is-on');
+}
+function hideStill() { if (stillEl) stillEl.classList.remove('is-on'); }
 
 /* ---------- кадры и две записи ---------- */
 const frameAt = t => clamp(Math.floor(t * FPS + 1e-4), 0, NF - 1);
@@ -521,6 +545,7 @@ function moveFwd(to, id) {
       paintState(to, true);
       drawAmb(true);
       cueRev();
+      showStill(beatI);
     });
   };
   if (video === vFwd) { go(); return; }
@@ -541,6 +566,7 @@ function moveBack(to, id) {
         moving = false;
         show(vFwd);
         drawAmb(true);
+        showStill(beatI);
       });
     });
   };
@@ -565,6 +591,7 @@ function seekBack(to, id) {
     moving = false;
     try { el.currentTime = to; } catch (e) { /* ничего */ }
     paintState(to, true);
+    showStill(beatI);
   };
   const step = () => {
     if (!alive()) { el.removeEventListener('seeked', next); return; }
@@ -594,6 +621,7 @@ function goBeat(i) {
   beatI = i;
   paintBeat(i);
   stopBeatLoop();
+  hideStill();
   const id = ++moveId;
   if (!videoOk) return;
   moving = true;
