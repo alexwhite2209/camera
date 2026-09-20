@@ -290,7 +290,7 @@ $icon = fn(string $name) => '<svg class="i" aria-hidden="true"><use href="#i-' .
       <div class="svc__card" id="svcCard">
         <span class="spot" aria-hidden="true"></span>
         <div class="svc__pan" role="tabpanel" id="pan-video" aria-labelledby="tab-video">
-          <figure class="svc__img"><img src="<?= $bp ?>/assets/img/svc-cctv.jpg" alt="Монитор охраны: восемь камер объекта, рядом клавиатура и джойстик" loading="lazy" width="900" height="1125"></figure>
+          <figure class="svc__img"><img src="<?= $bp ?>/assets/img/svc-cctv-room.jpg" alt="Пульт охраны: стена мониторов с камерами объекта" loading="lazy" width="900" height="1125"></figure>
           <div class="svc__body">
             <p class="svc__desc">Камеры для дома, офиса, склада и производства. Смотрите их со смартфона в любое время.</p>
             <p class="mini">Что входит</p>
@@ -306,7 +306,7 @@ $icon = fn(string $name) => '<svg class="i" aria-hidden="true"><use href="#i-' .
           </div>
         </div>
         <div class="svc__pan" role="tabpanel" id="pan-access" aria-labelledby="tab-access" hidden>
-          <figure class="svc__img"><img src="<?= $bp ?>/assets/img/svc-access.jpg" alt="Ладонь на считывателе, доступ разрешён" loading="lazy" width="900" height="1125"></figure>
+          <figure class="svc__img"><img src="<?= $bp ?>/assets/img/svc-access-panel.jpg" alt="Вызывная панель домофона с камерой на кирпичной стене у калитки" loading="lazy" width="900" height="1125"></figure>
           <div class="svc__body">
             <p class="svc__desc">Биометрия и карты доступа, видеодомофоны, турникеты и шлагбаумы. Чужой не пройдёт, свои не ждут.</p>
             <p class="mini">Что входит</p>
@@ -322,7 +322,7 @@ $icon = fn(string $name) => '<svg class="i" aria-hidden="true"><use href="#i-' .
           </div>
         </div>
         <div class="svc__pan" role="tabpanel" id="pan-alarm" aria-labelledby="tab-alarm" hidden>
-          <figure class="svc__img"><img src="<?= $bp ?>/assets/img/svc-alarm.jpg" alt="Прибор охранной сигнализации с клавиатурой на стене" loading="lazy" width="900" height="1125"></figure>
+          <figure class="svc__img"><img src="<?= $bp ?>/assets/img/svc-alarm-kit.jpg" alt="Приёмно-контрольный прибор с клавиатурой, извещатели и ручная кнопка тревоги" loading="lazy" width="900" height="1125"></figure>
           <div class="svc__body">
             <p class="svc__desc">Защита периметра и помещений. Датчики замечают движение, открытую дверь или разбитое стекло, и вы сразу получаете сигнал.</p>
             <p class="mini">Что входит</p>
