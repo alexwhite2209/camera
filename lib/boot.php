@@ -50,7 +50,7 @@ function db(): PDO
 function migrate(PDO $pdo): void
 {
     $v = (int)$pdo->query('PRAGMA user_version')->fetchColumn();
-    if ($v >= 2) return;
+    if ($v >= 3) return;
     if ($v < 1) {
     $pdo->beginTransaction();
     $pdo->exec("
@@ -122,6 +122,21 @@ function migrate(PDO $pdo): void
                 ->execute(['notify', json_encode($n, JSON_UNESCAPED_UNICODE)]);
         }
         $pdo->exec('PRAGMA user_version = 2');
+    }
+    if ($v < 3) {
+        $st = $pdo->prepare('SELECT value FROM settings WHERE key = ?');
+        $st->execute(['contacts']);
+        $raw = $st->fetchColumn();
+        $c = is_string($raw) ? (json_decode($raw, true) ?: []) : [];
+        if (empty($c['email'])) {
+            $c['email'] = defaults()['contacts']['email'];
+            $pdo->prepare('INSERT INTO settings(key, value) VALUES(?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value')
+                ->execute(['contacts', json_encode($c, JSON_UNESCAPED_UNICODE)]);
+            $cache = &settings_cache();
+            unset($cache['contacts']);
+            docs_sync($pdo); // в документах появился адрес для запросов по персональным данным
+        }
+        $pdo->exec('PRAGMA user_version = 3');
     }
 }
 

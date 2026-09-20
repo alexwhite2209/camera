@@ -6,7 +6,7 @@ return [
         'whatsapp' => '79867484446',
         'telegram' => 'airis_security',
         'hours'    => 'Ежедневно с 8:00 до 19:00',
-        'email'    => '',
+        'email'    => 'iris.control@yandex.ru',
         'region'   => 'Нижний Новгород и Нижегородская область',
     ],
 

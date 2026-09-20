@@ -587,3 +587,13 @@ html.is-static .plate__static-cta{display:flex;flex-wrap:wrap;gap:10px;margin-to
 
 /* телефон: на первом кадре только ролик, заголовок остаётся для поисковиков и экранных дикторов */
 html:not(.is-static) .stage.is-full .plate[data-plate="1"]{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0 0 0 0);clip-path:inset(50%);border:0!important;white-space:nowrap}
+
+/* почта в контактах и в подвале */
+.contact__mail{display:inline-block;margin-top:10px;color:var(--tx-2);text-decoration:none;border-bottom:1px solid rgba(160,180,240,.35);transition:color .3s,border-color .3s}
+.contact__mail:hover{color:var(--tx);border-color:var(--hud)}
+.foot__mail{margin-top:6px}
+.foot__mail a{color:var(--tx-3);text-decoration:none;transition:color .3s}
+.foot__mail a:hover{color:var(--tx-2)}
+
+/* номер телефона не рвём посередине */
+.nowrap{white-space:nowrap}

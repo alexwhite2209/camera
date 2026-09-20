@@ -338,7 +338,7 @@ $icon = fn(string $name) => '<svg class="i" aria-hidden="true"><use href="#i-' .
           </div>
         </div>
         <div class="svc__pan" role="tabpanel" id="pan-fire" aria-labelledby="tab-fire" hidden>
-          <figure class="svc__img"><img src="<?= $bp ?>/assets/img/svc-fire.jpg" alt="Пожарный датчик дыма под потолком горит красным" loading="lazy" width="900" height="1125"></figure>
+          <figure class="svc__img"><img src="<?= $bp ?>/assets/img/svc-fire-det.jpg" alt="Пожарный извещатель под потолком, тревожная подсветка" loading="lazy" width="900" height="1125"></figure>
           <div class="svc__body">
             <p class="svc__desc">Датчики дыма и тепла замечают возгорание в самом начале. Прибор сразу поднимает тревогу и включает оповещение.</p>
             <p class="mini">Что входит</p>
@@ -354,7 +354,7 @@ $icon = fn(string $name) => '<svg class="i" aria-hidden="true"><use href="#i-' .
           </div>
         </div>
         <div class="svc__pan" role="tabpanel" id="pan-soue" aria-labelledby="tab-soue" hidden>
-          <figure class="svc__img"><img src="<?= $bp ?>/assets/img/svc-soue.jpg" alt="Речевой оповещатель с красной подсветкой" loading="lazy" width="900" height="1125"></figure>
+          <figure class="svc__img"><img src="<?= $bp ?>/assets/img/svc-soue-hall.jpg" alt="Коридор: речевой оповещатель, прибор, ручной извещатель и табло «Выход»" loading="lazy" width="900" height="1125"></figure>
           <div class="svc__body">
             <p class="svc__desc">Сирены, речевые оповещатели и световые табло «Выход». При тревоге люди слышат сигнал и видят, куда идти.</p>
             <p class="mini">Что входит</p>
@@ -530,7 +530,7 @@ $icon = fn(string $name) => '<svg class="i" aria-hidden="true"><use href="#i-' .
     <header class="sec-head" data-reveal>
       <p class="kicker">Вопросы</p>
       <h2 class="h2" id="faqTitle">Коротко о главном</h2>
-      <p class="lead">Не нашли ответ? Позвоните: <a href="<?= e($tel) ?>"><?= e($phone) ?></a></p>
+      <p class="lead">Не нашли ответ? Позвоните: <a class="nowrap" href="<?= e($tel) ?>"><?= e($phone) ?></a></p>
     </header>
     <div class="faq__list" data-reveal>
       <?php foreach ($faq as $i => $q): ?>
@@ -552,6 +552,7 @@ $icon = fn(string $name) => '<svg class="i" aria-hidden="true"><use href="#i-' .
       <p class="lead">Оставьте заявку. Бесплатно проконсультируем и составим предварительную смету.</p>
       <a class="contact__phone" href="<?= e($tel) ?>"><?= e($phone) ?></a>
       <p class="contact__hours"><?= e($c['hours']) ?></p>
+      <?php if (!empty($c['email'])): ?><a class="contact__mail" href="mailto:<?= e($c['email']) ?>"><?= e($c['email']) ?></a><?php endif; ?>
       <div class="contact__msg">
         <a class="btn btn--ghost" href="<?= e($wa) ?>" target="_blank" rel="noopener"><?= $icon('wa') ?>WhatsApp</a>
         <a class="btn btn--ghost" href="<?= e($tg) ?>" target="_blank" rel="noopener"><?= $icon('tg') ?>Telegram</a>
@@ -634,6 +635,7 @@ $icon = fn(string $name) => '<svg class="i" aria-hidden="true"><use href="#i-' .
       <a class="foot__phone" href="<?= e($tel) ?>"><?= e($phone) ?></a>
       <p><?= e($c['hours']) ?></p>
       <p class="foot__msg"><a href="<?= e($wa) ?>" target="_blank" rel="noopener">WhatsApp</a> · <a href="<?= e($tg) ?>" target="_blank" rel="noopener">Telegram</a></p>
+      <?php if (!empty($c['email'])): ?><p class="foot__mail"><a href="mailto:<?= e($c['email']) ?>"><?= e($c['email']) ?></a></p><?php endif; ?>
     </div>
     <div class="foot__col">
       <a href="<?= page_url('privacy') ?>">Политика обработки персональных данных</a>
