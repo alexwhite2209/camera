@@ -167,8 +167,8 @@ $icon = fn(string $name) => '<svg class="i" aria-hidden="true"><use href="#i-' .
     <canvas class="stage__amb" id="amb" width="8" height="14" aria-hidden="true"></canvas>
     <div class="stage__frame" id="frame" aria-hidden="true">
       <picture><source media="(min-width: 901px) and (orientation: landscape), (min-width: 901px) and (pointer: fine)" srcset="<?= $bp ?>/assets/img/poster-d.jpg"><img class="stage__poster" src="<?= $bp ?>/assets/img/poster.jpg" alt="" decoding="async"></picture>
-      <video class="stage__v v-fwd" id="vFwd" muted playsinline preload="none" disablepictureinpicture tabindex="-1"></video>
-      <video class="stage__v v-rev" id="vRev" muted playsinline preload="none" disablepictureinpicture tabindex="-1"></video>
+      <video class="stage__v v-fwd" id="vFwd" muted playsinline webkit-playsinline preload="none" disablepictureinpicture tabindex="-1"></video>
+      <video class="stage__v v-rev" id="vRev" muted playsinline webkit-playsinline preload="none" disablepictureinpicture tabindex="-1"></video>
       <div class="stage__shade"></div>
       <div class="stage__alarm"></div>
       <div class="osd">
@@ -302,7 +302,7 @@ $icon = fn(string $name) => '<svg class="i" aria-hidden="true"><use href="#i-' .
               <li><?= $icon('check') ?>Прокладка кабельных трасс</li>
             </ul>
             <p class="mini">Где ставим</p>
-            <ul class="chips"><li>Частный дом</li><li>Квартира</li><li>Офис</li><li>Магазин</li><li>Склад</li><li>Производство</li></ul>
+            <ul class="chips"><li>Частный дом</li><li>Офис</li><li>Магазин</li><li>Склад</li><li>Производство</li></ul>
           </div>
         </div>
         <div class="svc__pan" role="tabpanel" id="pan-access" aria-labelledby="tab-access" hidden>
@@ -334,7 +334,7 @@ $icon = fn(string $name) => '<svg class="i" aria-hidden="true"><use href="#i-' .
               <li><?= $icon('check') ?>Проверка и настройка системы</li>
             </ul>
             <p class="mini">Где ставим</p>
-            <ul class="chips"><li>Частный дом</li><li>Квартира</li><li>Офис</li><li>Магазин</li><li>Склад</li></ul>
+            <ul class="chips"><li>Частный дом</li><li>Офис</li><li>Магазин</li><li>Склад</li></ul>
           </div>
         </div>
         <div class="svc__pan" role="tabpanel" id="pan-fire" aria-labelledby="tab-fire" hidden>

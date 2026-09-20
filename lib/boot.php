@@ -50,7 +50,8 @@ function db(): PDO
 function migrate(PDO $pdo): void
 {
     $v = (int)$pdo->query('PRAGMA user_version')->fetchColumn();
-    if ($v >= 1) return;
+    if ($v >= 2) return;
+    if ($v < 1) {
     $pdo->beginTransaction();
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
@@ -108,6 +109,20 @@ function migrate(PDO $pdo): void
     $pdo->exec('PRAGMA user_version = 1');
     $pdo->commit();
     docs_sync($pdo);
+    }
+    // почта для заявок появилась позже: вписываем её базам, созданным раньше
+    if ($v < 2) {
+        $st = $pdo->prepare('SELECT value FROM settings WHERE key = ?');
+        $st->execute(['notify']);
+        $raw = $st->fetchColumn();
+        $n = is_string($raw) ? (json_decode($raw, true) ?: []) : [];
+        if (empty($n['email'])) {
+            $n['email'] = defaults()['notify']['email'];
+            $pdo->prepare('INSERT INTO settings(key, value) VALUES(?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value')
+                ->execute(['notify', json_encode($n, JSON_UNESCAPED_UNICODE)]);
+        }
+        $pdo->exec('PRAGMA user_version = 2');
+    }
 }
 
 function defaults(): array
@@ -300,7 +315,7 @@ function tel_href(string $p): string
 // ---------- справочники ----------
 
 const OBJECT_TYPES = [
-    'house'     => 'Частный дом или квартира',
+    'house'     => 'Частный дом',
     'office'    => 'Офис или магазин',
     'warehouse' => 'Склад или производство',
     'other'     => 'Другое',
@@ -314,7 +329,7 @@ const LEAD_STATUSES = [
     'spam'    => 'Спам',
 ];
 
-const CALC_OBJECTS = ['house' => 'Жилой дом', 'flat' => 'Квартира', 'office' => 'Офис', 'warehouse' => 'Склад или цех'];
+const CALC_OBJECTS = ['house' => 'Жилой дом', 'flat' => 'Магазин', 'office' => 'Офис', 'warehouse' => 'Склад или цех'];
 const CALC_SYSTEMS = ['cctv' => 'камеры', 'access' => 'СКУД', 'fire' => 'АПС', 'soue' => 'СОУЭ'];
 const CALC_POINTS  = ['2-4', '5-8', '9-16', '17+'];
 
@@ -538,13 +553,13 @@ function notify_lead(int $id, array $lead): void
     $lines = ["Новая заявка №{$id} на сайте АЙРИС"];
     if (!empty($lead['object_type']) && isset(OBJECT_TYPES[$lead['object_type']])) $lines[] = 'Объект: ' . OBJECT_TYPES[$lead['object_type']];
     if (!empty($lead['calc_text'])) $lines[] = 'Расчёт: ' . $lead['calc_text'];
-    if (!empty($n['tg_with_pd'])) {
-        $lines[] = 'Имя: ' . $lead['name'];
-        $lines[] = 'Телефон: ' . format_phone($lead['phone']);
-        if (!empty($lead['comment'])) $lines[] = 'Комментарий: ' . $lead['comment'];
-    }
-    $lines[] = 'Открыть: ' . site_url() . '/admin/?p=lead&id=' . $id;
-    $text = implode("\n", $lines);
+    $pd = ['Имя: ' . $lead['name'], 'Телефон: ' . format_phone($lead['phone'])];
+    if (!empty($lead['comment'])) $pd[] = 'Комментарий: ' . $lead['comment'];
+    $link = 'Открыть: ' . site_url() . '/admin/?p=lead&id=' . $id;
+    // в Telegram имя и телефон уходят только по разрешению: его серверы за границей
+    $text = implode("\n", array_merge($lines, !empty($n['tg_with_pd']) ? $pd : [], [$link]));
+    // в письме они есть всегда: почта оператора, ящик на российской почте
+    $mailText = implode("\n", array_merge($lines, $pd, [$link]));
 
     if (!empty($n['tg_token']) && !empty($n['tg_chat'])) {
         tg_api((string)$n['tg_token'], 'sendMessage', ['chat_id' => (string)$n['tg_chat'], 'text' => $text, 'disable_web_page_preview' => 'true']);
@@ -552,7 +567,7 @@ function notify_lead(int $id, array $lead): void
     if (!empty($n['email']) && filter_var($n['email'], FILTER_VALIDATE_EMAIL)) {
         $host = preg_replace('/[^A-Za-z0-9.\-]/', '', $_SERVER['HTTP_HOST'] ?? 'localhost');
         $headers = "MIME-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8\r\nFrom: =?UTF-8?B?" . base64_encode('Сайт АЙРИС') . "?= <noreply@{$host}>\r\n";
-        @mail((string)$n['email'], '=?UTF-8?B?' . base64_encode("Новая заявка №{$id}") . '?=', $text, $headers);
+        @mail((string)$n['email'], '=?UTF-8?B?' . base64_encode("Новая заявка №{$id}") . '?=', $mailText, $headers);
     }
 }
 

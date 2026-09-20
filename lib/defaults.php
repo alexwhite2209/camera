@@ -69,7 +69,7 @@ return [
         'tg_token'  => '',
         'tg_chat'   => '',
         'tg_with_pd' => false,
-        'email'     => '',
+        'email'     => 'iris.control@yandex.ru',
     ],
 
     'retention_months' => 12,

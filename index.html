@@ -122,8 +122,8 @@
     <canvas class="stage__amb" id="amb" width="8" height="14" aria-hidden="true"></canvas>
     <div class="stage__frame" id="frame" aria-hidden="true">
       <picture><source media="(min-width: 901px) and (orientation: landscape), (min-width: 901px) and (pointer: fine)" srcset="./assets/img/poster-d.jpg"><img class="stage__poster" src="./assets/img/poster.jpg" alt="" decoding="async"></picture>
-      <video class="stage__v v-fwd" id="vFwd" muted playsinline preload="none" disablepictureinpicture tabindex="-1"></video>
-      <video class="stage__v v-rev" id="vRev" muted playsinline preload="none" disablepictureinpicture tabindex="-1"></video>
+      <video class="stage__v v-fwd" id="vFwd" muted playsinline webkit-playsinline preload="none" disablepictureinpicture tabindex="-1"></video>
+      <video class="stage__v v-rev" id="vRev" muted playsinline webkit-playsinline preload="none" disablepictureinpicture tabindex="-1"></video>
       <div class="stage__shade"></div>
       <div class="stage__alarm"></div>
       <div class="osd">
@@ -257,7 +257,7 @@
               <li><svg class="i" aria-hidden="true"><use href="#i-check"/></svg>Прокладка кабельных трасс</li>
             </ul>
             <p class="mini">Где ставим</p>
-            <ul class="chips"><li>Частный дом</li><li>Квартира</li><li>Офис</li><li>Магазин</li><li>Склад</li><li>Производство</li></ul>
+            <ul class="chips"><li>Частный дом</li><li>Офис</li><li>Магазин</li><li>Склад</li><li>Производство</li></ul>
           </div>
         </div>
         <div class="svc__pan" role="tabpanel" id="pan-access" aria-labelledby="tab-access" hidden>
@@ -289,7 +289,7 @@
               <li><svg class="i" aria-hidden="true"><use href="#i-check"/></svg>Проверка и настройка системы</li>
             </ul>
             <p class="mini">Где ставим</p>
-            <ul class="chips"><li>Частный дом</li><li>Квартира</li><li>Офис</li><li>Магазин</li><li>Склад</li></ul>
+            <ul class="chips"><li>Частный дом</li><li>Офис</li><li>Магазин</li><li>Склад</li></ul>
           </div>
         </div>
         <div class="svc__pan" role="tabpanel" id="pan-fire" aria-labelledby="tab-fire" hidden>
@@ -382,7 +382,7 @@
           <legend><span class="step__n">1</span>Тип объекта</legend>
           <div class="opts">
                           <label class="opt"><input type="radio" name="obj" value="house" checked><span>Жилой дом</span></label>
-                          <label class="opt"><input type="radio" name="obj" value="flat"><span>Квартира</span></label>
+                          <label class="opt"><input type="radio" name="obj" value="flat"><span>Магазин</span></label>
                           <label class="opt"><input type="radio" name="obj" value="office"><span>Офис</span></label>
                           <label class="opt"><input type="radio" name="obj" value="warehouse"><span>Склад или цех</span></label>
                       </div>
@@ -661,7 +661,7 @@
           <label for="fObj">Тип объекта</label>
           <select id="fObj" name="object_type">
             <option value="">Выберите, если знаете</option>
-                          <option value="house">Частный дом или квартира</option>
+                          <option value="house">Частный дом</option>
                           <option value="office">Офис или магазин</option>
                           <option value="warehouse">Склад или производство</option>
                           <option value="other">Другое</option>
@@ -742,6 +742,6 @@
   <p id="lbCap"></p>
 </dialog>
 
-<script src="./assets/js/site.js?v=f2d9aab1" defer></script>
+<script src="./assets/js/site.js?v=bc0fd534" defer></script>
 </body>
 </html>

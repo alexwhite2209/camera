@@ -171,44 +171,64 @@ let SRC = MOBILE_MQ.matches ? SOURCES.mobile : SOURCES.desktop;
 let STOPS = SRC.stops;
 FPS = SRC.fps;
 const loadListeners = new Set();
-let netFrac = 0, videoStarted = false, videoOk = false, revOk = false;
+let netFrac = 0, videoStarted = false, videoOk = false, revOk = false, gestureSeen = false;
 let resolveVideo;
 const videoReady = new Promise(r => { resolveVideo = r; });
 const loadedFraction = () => (beatsOn ? netFrac : 1);
 const notifyLoad = () => loadListeners.forEach(fn => fn());
 
-// Весь файл целиком в память: так перемотка работает на любом хостинге.
-function fetchBlob(tier, onProgress) {
-  const ctrl = new AbortController();
-  let watchdog = setTimeout(() => ctrl.abort(), 25000);
-  return fetch(tier.url, { priority: 'low', signal: ctrl.signal }).then(res => {
-    if (!res.ok) throw new Error('http ' + res.status);
-    const total = Number(res.headers.get('Content-Length')) || tier.bytes;
-    const reader = res.body.getReader();
-    const chunks = [];
-    let got = 0, lastAt = 0;
-    const pump = () => reader.read().then(r => {
-      if (r.done) return null;
-      clearTimeout(watchdog);
-      watchdog = setTimeout(() => ctrl.abort(), 25000);
-      chunks.push(r.value);
-      got += r.value.length;
-      const now = performance.now();
-      if (onProgress && now - lastAt > 100) { lastAt = now; onProgress(Math.min(1, got / total)); }
-      return pump();
-    });
-    return pump().then(() => {
-      clearTimeout(watchdog);
-      if (onProgress) onProgress(1);
-      return URL.createObjectURL(new Blob(chunks, { type: 'video/mp4' }));
-    });
-  });
+// Safari на айфоне разрешает проигрывать видео только после касания экрана, а в режиме энергосбережения
+// не пускает даже беззвучное. Поэтому на первом касании коротко запускаем запись и сразу ставим на паузу:
+// дальше браузер считает её разрешённой и свайпы работают.
+function primeVideo(el) {
+  if (!el || !gestureSeen || !el.currentSrc || el.dataset.primed) return;
+  el.dataset.primed = '1';
+  const t = el.currentTime, id = moveId;
+  el.muted = true;
+  const p = el.play();
+  // если за это время начался переход к остановке, видео не трогаем
+  const back = () => { if (id !== moveId) return; el.pause(); try { el.currentTime = t; } catch (e) { /* ещё грузится */ } };
+  if (p && p.then) p.then(back).catch(() => { delete el.dataset.primed; });
+  else back();
 }
+function onTouch() {
+  gestureSeen = true;
+  primeVideo(vFwd);
+  primeVideo(vRev);
+}
+['touchstart', 'pointerdown', 'keydown'].forEach(ev => addEventListener(ev, onTouch, { passive: true }));
 
-function attach(el, url) {
+// Ролик подключается прямой ссылкой, а не скачивается в память: Safari на айфоне не проигрывает
+// видео из памяти (blob), да и браузер сам докачивает нужные куски по мере надобности.
+function attach(el, url, onProgress) {
   return new Promise((res, rej) => {
-    el.addEventListener('canplay', () => res(), { once: true });
-    el.addEventListener('error', () => rej(new Error('decode')), { once: true });
+    let done = false, soon = 0;
+    const clean = () => {
+      clearTimeout(hard);
+      clearTimeout(soon);
+      el.removeEventListener('progress', tick);
+      el.removeEventListener('loadeddata', tick);
+      el.removeEventListener('canplay', ok);
+      el.removeEventListener('error', fail);
+    };
+    function ok() { if (done) return; done = true; clean(); res(); }
+    function fail() { if (done) return; done = true; clean(); rej(new Error('video')); }
+    function tick() {
+      if (onProgress && el.duration) {
+        try {
+          const b = el.buffered;
+          onProgress(clamp(b.length ? b.end(b.length - 1) / el.duration : 0, 0, 1));
+        } catch (e) { /* данных ещё нет */ }
+      }
+      // на мобильном интернете iOS не докачивает ролик заранее, поэтому длины кадра уже достаточно
+      if (!soon && el.readyState >= 1) soon = setTimeout(() => (el.readyState >= 1 ? ok() : null), 3500);
+      if (el.readyState >= 3) ok();
+    }
+    const hard = setTimeout(() => (el.readyState >= 1 ? ok() : fail()), 20000);
+    el.addEventListener('progress', tick);
+    el.addEventListener('loadeddata', tick);
+    el.addEventListener('canplay', ok);
+    el.addEventListener('error', fail);
     el.preload = 'auto';
     el.src = url;
     el.load();
@@ -221,8 +241,7 @@ function startVideo() {
   SRC = MOBILE_MQ.matches ? SOURCES.mobile : SOURCES.desktop;
   STOPS = SRC.stops;
   FPS = SRC.fps;
-  fetchBlob(SRC.fwd, f => { netFrac = f; notifyLoad(); })
-    .then(url => attach(vFwd, url))
+  attach(vFwd, SRC.fwd.url, f => { netFrac = f; notifyLoad(); })
     .then(() => {
       DUR = vFwd.duration || DUR;
       NF = Math.max(2, Math.round(DUR * FPS));
@@ -231,9 +250,11 @@ function startVideo() {
       stage.classList.add('video-ready');
       notifyLoad();
       resolveVideo();
+      primeVideo(vFwd);
       if (beatsOn) jumpTo(stopTime(beatI));
       if (!SRC.rev || !vRev) return null;
-      return fetchBlob(SRC.rev, null).then(url => attach(vRev, url)).then(() => { revOk = true; cueRev(); });
+      // запись задом наперёд подключается следом, чтобы не мешать основной занимать канал
+      return wait(1500).then(() => attach(vRev, SRC.rev.url)).then(() => { revOk = true; primeVideo(vRev); cueRev(); });
     })
     .catch(() => {
       if (videoOk) return; // не загрузилась только запись задом наперёд: назад пойдёт пошаговой перемоткой
@@ -479,10 +500,11 @@ function jumpTo(t) {
 // Проиграть запись el до времени toEl (в её собственном времени). toFwd переводит её время в время ролика.
 function playEl(el, toEl, toFwd, id, landed) {
   const span = Math.max(0.05, toEl - el.currentTime);
-  el.playbackRate = Math.min(4.5, Math.max(1, span / 0.85));
+  el.playbackRate = Math.min(2.5, Math.max(1, span / 0.85));
+  const rate = el.playbackRate || 1; // браузер мог ограничить ускорение, ждём по настоящей скорости
   let fired = false;
   const check = () => { if (el.currentTime >= toEl - 0.012) finish(); };
-  const timer = setTimeout(() => finish(), (span / el.playbackRate) * 1000 + 700);
+  const timer = setTimeout(() => finish(), (span / rate) * 1000 + 900);
   function finish() {
     if (fired || id !== moveId) return;
     fired = true;
@@ -1018,7 +1040,7 @@ $$('.count').forEach(el => countIO.observe(el));
 /* ---------- калькулятор ---------- */
 const calcForm = $('#calcForm');
 const P = CFG.prices;
-const OBJ = { house: 'Жилой дом', flat: 'Квартира', office: 'Офис', warehouse: 'Склад или цех' };
+const OBJ = { house: 'Жилой дом', flat: 'Магазин', office: 'Офис', warehouse: 'Склад или цех' };
 const SYS = [['cctv', 'камеры'], ['access', 'СКУД'], ['fire', 'АПС'], ['soue', 'СОУЭ']];
 // АПС и СОУЭ: цена «от» по типу объекта из админки, 0 значит «по смете»
 const EXTRA = [['fire', 'Пожарная сигнализация (АПС)', 'АПС'], ['soue', 'Оповещение (СОУЭ)', 'СОУЭ']];
@@ -1174,7 +1196,7 @@ function attachCalc(c) {
   chip.hidden = !c;
   if (c) {
     $('#calcChipText').textContent = calcText(c);
-    const objMap = { house: 'house', flat: 'house', office: 'office', warehouse: 'warehouse' };
+    const objMap = { house: 'house', flat: 'office', office: 'office', warehouse: 'warehouse' };
     const sel = $('#fObj');
     if (!sel.value) sel.value = objMap[c.obj] || '';
   }
