@@ -253,8 +253,13 @@ function startVideo() {
       primeVideo(vFwd);
       if (beatsOn) jumpTo(stopTime(beatI));
       if (!SRC.rev || !vRev) return null;
-      // запись задом наперёд подключается следом, чтобы не мешать основной занимать канал
-      return wait(1500).then(() => attach(vRev, SRC.rev.url)).then(() => { revOk = true; primeVideo(vRev); cueRev(); });
+      // запись задом наперёд ждёт, пока прямая не скачается целиком: на телефоне канал узкий
+      const revWait = vFwd.readyState >= 4 ? wait(300) : new Promise(r => {
+        const go = () => { vFwd.removeEventListener('canplaythrough', go); clearTimeout(cap); r(); };
+        const cap = setTimeout(go, 9000);
+        vFwd.addEventListener('canplaythrough', go);
+      });
+      return revWait.then(() => attach(vRev, SRC.rev.url)).then(() => { revOk = true; primeVideo(vRev); cueRev(); });
     })
     .catch(() => {
       if (videoOk) return; // не загрузилась только запись задом наперёд: назад пойдёт пошаговой перемоткой
