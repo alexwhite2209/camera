@@ -214,10 +214,10 @@ $icon = fn(string $name) => '<svg class="i" aria-hidden="true"><use href="#i-' .
           <p class="plate__text fx-sub">Датчики дыма и тепла замечают пожар в самом начале. Сирена и речевое оповещение включаются сразу.</p>
         </div></div>
         <ul class="status fx-chips" id="status">
-          <li data-at="4.35" data-on="тревога"><span>Дым</span><b>норма</b></li>
+          <li data-at="4.35" data-at-v="4.75" data-on="тревога"><span>Дым</span><b>норма</b></li>
           <li><span>Тепло</span><b>норма</b></li>
-          <li data-at="6.25" data-on="включена" data-off="ждёт"><span>Сирена</span><b>ждёт</b></li>
-          <li data-at="6.3" data-on="идёт" data-off="ждёт"><span>Оповещение</span><b>ждёт</b></li>
+          <li data-at="6.25" data-at-v="7.81" data-on="включена" data-off="ждёт"><span>Сирена</span><b>ждёт</b></li>
+          <li data-at="6.3" data-at-v="7.93" data-on="идёт" data-off="ждёт"><span>Оповещение</span><b>ждёт</b></li>
         </ul>
       </article>
 

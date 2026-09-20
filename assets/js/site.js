@@ -138,17 +138,20 @@ const PL = [
 // и горизонтальный для компьютера скомпонованы по-разному, поэтому кадры остановок у них свои.
 // fold: на узком экране плашка сворачивается до статусов, чтобы не закрывать оповещатель.
 const STOPS_V = [
-  { t: 0, n: 1 }, { t: 1.7, n: 2 }, { t: 3.15, n: 3 }, { t: 4.6, n: 4 },
-  { t: 6.37, n: 4, fold: true }, { t: 8.4, n: 5 }, { t: 9.74, n: 6 }, { t: -1, n: 7 },
+  { t: 0, n: 1 }, { t: 1.82, n: 2 }, { t: 2.63, n: 3 }, { t: 5.17, n: 4 },
+  { t: 8.05, n: 4, fold: true }, { t: 9.44, n: 5 }, { t: 10.73, n: 6 }, { t: -1, n: 7 },
 ];
 const STOPS_H = [
   { t: 0, n: 1 }, { t: 1.7, n: 2 }, { t: 3.17, n: 3 }, { t: 4.6, n: 4 },
   { t: 6.42, n: 4, fold: true }, { t: 8.4, n: 5 }, { t: 9.75, n: 6 }, { t: -1, n: 7 },
 ];
 
-const CAMS = [[0, 'CAM 01 · ФАСАД'], [1.0, 'CAM 02 · СЕРВЕРНАЯ'], [2.37, 'CAM 03 · ВХОД'], [3.5, 'CAM 04 · КОРИДОР'],
+const CAMS_H = [[0, 'CAM 01 · ФАСАД'], [1.0, 'CAM 02 · СЕРВЕРНАЯ'], [2.37, 'CAM 03 · ВХОД'], [3.5, 'CAM 04 · КОРИДОР'],
   [4.75, 'CAM 04 · ТРЕВОГА'], [6.85, 'CAM 05 · ПУЛЬТ'], [9.35, 'CAM 06 · ТЕЛЕФОН'], [10.75, 'CAM 07 · ФАСАД']];
-const ALARM = [4.75, 6.8];
+const CAMS_V = [[0, 'CAM 01 · ФАСАД'], [1.33, 'CAM 02 · СЕРВЕРНАЯ'], [2.08, 'CAM 03 · ВХОД'], [3.1, 'CAM 04 · КОРИДОР'],
+  [5.5, 'CAM 04 · ТРЕВОГА'], [8.62, 'CAM 05 · ПУЛЬТ'], [10.16, 'CAM 06 · ТЕЛЕФОН'], [11.25, 'CAM 07 · ФАСАД']];
+const ALARM_H = [4.75, 6.8];
+const ALARM_V = [5.5, 8.58];
 
 /* ---------- загрузка: ролик сразу, запись задом наперёд следом ---------- */
 const MOBILE_MQ = matchMedia('(max-width: 900px), (orientation: portrait) and (pointer: coarse)');
@@ -158,13 +161,13 @@ const SOURCES = {
   desktop: {
     fwd: { url: `${BASE}/assets/video/hero-d.mp4`, bytes: 6007402 },
     rev: { url: `${BASE}/assets/video/hero-d-rev.mp4`, bytes: 5422154 },
-    ar: 16 / 9, fps: 24, sign: [0.49, 0.27], stops: STOPS_H,
+    ar: 16 / 9, fps: 24, sign: [0.49, 0.27], stops: STOPS_H, cams: CAMS_H, alarm: ALARM_H,
     sides: { 1: 'L', 2: 'R', 3: 'R', 4: 'L', 5: 'L', 6: 'R' }, // там, где кадр пустой
   },
   mobile: {
-    fwd: { url: `${BASE}/assets/video/hero-m.mp4`, bytes: 3715820 },
-    rev: { url: `${BASE}/assets/video/hero-m-rev.mp4`, bytes: 3763781 },
-    ar: 9 / 16, fps: 30, sign: [0.47, 0.275], stops: STOPS_V,
+    fwd: { url: `${BASE}/assets/video/hero-m.mp4`, bytes: 4318221 },
+    rev: { url: `${BASE}/assets/video/hero-m-rev.mp4`, bytes: 4055003 },
+    ar: 9 / 16, fps: 48, sign: [0.47, 0.275], stops: STOPS_V, cams: CAMS_V, alarm: ALARM_V,
   },
 };
 let SRC = MOBILE_MQ.matches ? SOURCES.mobile : SOURCES.desktop;
@@ -434,8 +437,8 @@ function updateOsd(force) {
   const now = performance.now();
   if (!force && now - osdLastT < 100) return;
   osdLastT = now;
-  let cam = CAMS[0][1];
-  for (const [at, name] of CAMS) if (curT >= at) cam = name;
+  let cam = SRC.cams[0][1];
+  for (const [at, name] of SRC.cams) if (curT >= at) cam = name;
   if (cam !== osdCamTxt) { osdCamTxt = cam; osdCam.textContent = cam; }
   const tc = fmtTc(curT, 30);
   if (tc !== osdTcTxt) { osdTcTxt = tc; osdTc.textContent = tc; }
@@ -448,14 +451,15 @@ function tickClock() {
 function paintState(t, force) {
   curT = t;
   statusRows.forEach(li => {
-    const hot = t >= +li.dataset.at;
+    // у вертикального ролика своя секунда срабатывания: шкалы двух роликов не совпадают
+    const hot = t >= +((SRC.ar < 1 && li.dataset.atV) || li.dataset.at);
     if (hot !== li.classList.contains('is-hot')) {
       li.classList.toggle('is-hot', hot);
       $('b', li).textContent = hot ? li.dataset.on : (li.dataset.off || 'норма');
     }
     if (li.dataset.off) li.classList.toggle('is-idle', !hot);
   });
-  const alarm = t >= ALARM[0] && t <= ALARM[1];
+  const alarm = t >= SRC.alarm[0] && t <= SRC.alarm[1];
   if (alarm !== stAlarm) { stAlarm = alarm; stage.classList.toggle('is-alarm', alarm); }
   updateOsd(force);
 }
