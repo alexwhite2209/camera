@@ -4,10 +4,7 @@ declare(strict_types=1);
 require __DIR__ . '/boot.php';
 security_headers();
 
-$titles = [
-    'privacy' => 'Политика обработки персональных данных',
-    'consent' => 'Согласие на обработку персональных данных',
-];
+$titles = ['privacy' => 'Политика обработки персональных данных'];
 $kind = $DOC_KIND ?? 'privacy';
 $ver  = isset($_GET['v']) && ctype_digit((string)$_GET['v']) ? (int)$_GET['v'] : null;
 $doc  = doc_get($kind, $ver);
@@ -17,7 +14,6 @@ if (!$doc) {
 $c    = setting('contacts');
 $bp   = base_path();
 $date = $doc ? date('d.m.Y', strtotime($doc['created_at'])) : '';
-$other = $kind === 'privacy' ? ['consent', 'Согласие на обработку персональных данных'] : ['privacy', 'Политика обработки персональных данных'];
 ?><!doctype html>
 <html lang="ru">
 <head>
@@ -46,10 +42,10 @@ $other = $kind === 'privacy' ? ['consent', 'Согласие на обработ
   <?php else: ?>
     <p>Документ не найден.</p>
   <?php endif; ?>
-  <p class="doc__see">Смотрите также: <a href="<?= page_url($other[0]) ?>"><?= e($other[1]) ?></a></p>
 </main>
 <footer class="doc-foot">
   <span>© <?= date('Y') ?> АЙРИС</span>
+  <?php $ll = legal_line(); if ($ll !== ''): ?><span class="doc-foot__legal"><?= e($ll) ?></span><?php endif; ?>
   <a href="<?= e(tel_href($c['phone'])) ?>"><?= e($c['phone']) ?></a>
 </footer>
 </body>

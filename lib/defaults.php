@@ -61,16 +61,6 @@ return [
         'ogrn'     => '',
         'address'  => '',
         'email'    => '',
+        'license'  => '',
     ],
-
-    // По умолчанию в Telegram уходит только номер заявки, без имени и телефона:
-    // так личные данные не покидают сервер (152-ФЗ, трансграничная передача).
-    'notify' => [
-        'tg_token'  => '',
-        'tg_chat'   => '',
-        'tg_with_pd' => false,
-        'email'     => 'iris.control@yandex.ru',
-    ],
-
-    'retention_months' => 12,
 ];

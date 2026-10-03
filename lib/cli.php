@@ -29,7 +29,7 @@ if ($cmd === 'build-static') {
         foreach (glob($dir . '/{,.}[!.,!..]*', GLOB_BRACE) ?: [] as $f) is_dir($f) ? $rmTmp($f) : @unlink($f);
         @rmdir($dir);
     };
-    $pages = ['index' => 'index.php', 'privacy' => 'privacy.php', 'consent' => 'consent.php'];
+    $pages = ['index' => 'index.php', 'privacy' => 'privacy.php'];
     foreach ($pages as $name => $script) {
         $p = proc_open([PHP_BINARY, '-d', 'display_errors=stderr', APP_ROOT . '/' . $script],
             [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes, APP_ROOT, $env);

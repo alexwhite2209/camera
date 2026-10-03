@@ -8,7 +8,7 @@ admin_session();
 
 if (!admins_exist()) redirect(base_path() . '/admin/setup.php');
 
-$p = (string)($_GET['p'] ?? 'leads');
+$p = (string)($_GET['p'] ?? 'contacts');
 $isPost = ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST';
 
 if ($isPost && !csrf_ok()) {
@@ -49,7 +49,7 @@ if (!admin_user()) {
                 if (password_needs_rehash($u['pass'], PASSWORD_DEFAULT)) {
                     db()->prepare('UPDATE admins SET pass = ? WHERE id = ?')->execute([password_hash($pass, PASSWORD_DEFAULT), $u['id']]);
                 }
-                redirect(admin_url('leads'));
+                redirect(admin_url('contacts'));
             }
             throttle_hit('login:' . $ip);
             usleep(400000);
@@ -78,204 +78,10 @@ if (!admin_user()) {
     exit;
 }
 
-if ($p === 'login') redirect(admin_url('leads'));
-
-/* ---------- общие помощники для заявок ---------- */
-function leads_filter(): array
-{
-    $s = (string)($_GET['s'] ?? 'all');
-    if ($s !== 'all' && !isset(LEAD_STATUSES[$s])) $s = 'all';
-    $q = trim((string)($_GET['q'] ?? ''));
-    $where = [];
-    $args = [];
-    if ($s === 'all') $where[] = "status != 'spam'";
-    else { $where[] = 'status = ?'; $args[] = $s; }
-    if ($q !== '') {
-        $like = '%' . str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $q) . '%';
-        $digits = preg_replace('/\D+/', '', $q);
-        if (strlen($digits) >= 3) {
-            if (strlen($digits) === 11 && ($digits[0] === '8' || $digits[0] === '7')) $digits = substr($digits, 1);
-            $where[] = "(name LIKE ? ESCAPE '\\' OR phone LIKE ?)";
-            $args[] = $like;
-            $args[] = '%' . $digits . '%';
-        } else {
-            $where[] = "(name LIKE ? ESCAPE '\\' OR comment LIKE ? ESCAPE '\\')";
-            $args[] = $like;
-            $args[] = $like;
-        }
-    }
-    return [$s, $q, 'WHERE ' . implode(' AND ', $where), $args];
-}
-
-function csv_safe(string $v): string
-{
-    return preg_match('/^[=+\-@\t\r]/', $v) ? "'" . $v : $v;
-}
+if ($p === 'login') redirect(admin_url('contacts'));
 
 /* ================= разделы ================= */
 switch ($p) {
-
-/* ---------- заявки ---------- */
-case 'leads':
-    $purged = purge_old_leads();
-    [$s, $q, $where, $args] = leads_filter();
-    $counts = ['all' => 0];
-    foreach (db()->query('SELECT status, COUNT(*) c FROM leads GROUP BY status') as $r) {
-        $counts[$r['status']] = (int)$r['c'];
-        if ($r['status'] !== 'spam') $counts['all'] += (int)$r['c'];
-    }
-    $per = 30;
-    $pg = max(1, (int)($_GET['pg'] ?? 1));
-    $total = db()->prepare("SELECT COUNT(*) FROM leads $where");
-    $total->execute($args);
-    $total = (int)$total->fetchColumn();
-    $pages = max(1, (int)ceil($total / $per));
-    $pg = min($pg, $pages);
-    $st = db()->prepare("SELECT * FROM leads $where ORDER BY id DESC LIMIT $per OFFSET " . (($pg - 1) * $per));
-    $st->execute($args);
-    $rows = $st->fetchAll();
-
-    admin_head('Заявки', 'leads');
-    ?>
-    <header class="head">
-      <h1>Заявки</h1>
-      <a class="btn" href="<?= e(admin_url('export', ['s' => $s, 'q' => $q])) ?>">Выгрузить в Excel</a>
-    </header>
-    <?php if ($purged): ?><p class="note note--info">Удалено старых заявок по сроку хранения: <?= $purged ?>.</p><?php endif; ?>
-    <nav class="tabs" aria-label="Статусы">
-      <?php foreach (['all' => 'Все', 'new' => 'Новые', 'work' => 'В работе', 'measure' => 'Замер назначен', 'done' => 'Закрытые', 'spam' => 'Спам'] as $k => $label): ?>
-        <a class="<?= $s === $k ? 'on' : '' ?>" href="<?= e(admin_url('leads', ['s' => $k, 'q' => $q])) ?>"><?= e($label) ?> <b><?= (int)($counts[$k] ?? 0) ?></b></a>
-      <?php endforeach; ?>
-    </nav>
-    <form class="search" method="get" action="<?= base_path() ?>/admin/">
-      <input type="hidden" name="p" value="leads"><input type="hidden" name="s" value="<?= e($s) ?>">
-      <input type="search" name="q" value="<?= e($q) ?>" placeholder="Имя или телефон" aria-label="Поиск по имени или телефону">
-      <button class="btn" type="submit">Найти</button>
-    </form>
-    <?php if (!$rows): ?>
-      <div class="empty"><p><?= $q !== '' ? 'Ничего не нашлось.' : 'Здесь появятся заявки с сайта.' ?></p></div>
-    <?php else: ?>
-      <div class="leads">
-        <div class="leads__row leads__row--head" aria-hidden="true"><span>№</span><span>Когда</span><span>Имя</span><span>Телефон</span><span>Запрос</span><span>Статус</span></div>
-        <?php foreach ($rows as $r): $calc = lead_calc_text($r); ?>
-          <a class="leads__row<?= $r['status'] === 'new' ? ' is-new' : '' ?>" href="<?= e(admin_url('lead', ['id' => $r['id']])) ?>">
-            <span class="c-id">№ <?= (int)$r['id'] ?></span>
-            <span class="c-when"><?= e(date('d.m H:i', strtotime($r['created_at']))) ?></span>
-            <span class="c-name"><?= e($r['name']) ?></span>
-            <span class="c-phone"><?= e(format_phone($r['phone'])) ?></span>
-            <span class="c-req"><?= e($calc ?: (object_label($r['object_type']) ?: mb_strimwidth($r['comment'], 0, 70, '…'))) ?></span>
-            <span class="c-st"><?= status_badge($r['status']) ?></span>
-          </a>
-        <?php endforeach; ?>
-      </div>
-      <?php if ($pages > 1): ?>
-        <nav class="pager" aria-label="Страницы">
-          <?php for ($i = 1; $i <= $pages; $i++): ?>
-            <a class="<?= $i === $pg ? 'on' : '' ?>" href="<?= e(admin_url('leads', ['s' => $s, 'q' => $q, 'pg' => $i])) ?>"><?= $i ?></a>
-          <?php endfor; ?>
-        </nav>
-      <?php endif; ?>
-    <?php endif; ?>
-    <?php
-    admin_foot();
-    break;
-
-/* ---------- одна заявка ---------- */
-case 'lead':
-    $id = (int)($_GET['id'] ?? 0);
-    $st = db()->prepare('SELECT * FROM leads WHERE id = ?');
-    $st->execute([$id]);
-    $lead = $st->fetch();
-    if (!$lead) { flash('error', 'Заявка не найдена. Возможно, её уже удалили.'); redirect(admin_url('leads')); }
-
-    if ($isPost) {
-        $op = (string)($_POST['op'] ?? '');
-        if ($op === 'delete') {
-            db()->prepare('DELETE FROM leads WHERE id = ?')->execute([$id]);
-            flash('ok', "Заявка № $id удалена вместе с персональными данными.");
-            redirect(admin_url('leads'));
-        }
-        $status = (string)($_POST['status'] ?? $lead['status']);
-        if (!isset(LEAD_STATUSES[$status])) $status = $lead['status'];
-        $note = mb_substr(trim(str_replace("\r\n", "\n", (string)($_POST['note'] ?? ''))), 0, 2000);
-        db()->prepare('UPDATE leads SET status = ?, note = ?, updated_at = ? WHERE id = ?')->execute([$status, $note, now(), $id]);
-        flash('ok', 'Сохранено.');
-        redirect(admin_url('lead', ['id' => $id]));
-    }
-
-    $calc = lead_calc_text($lead);
-    $utm = $lead['utm_json'] ? (json_decode($lead['utm_json'], true) ?: []) : [];
-    $src = ['form' => 'форма на сайте', 'calc' => 'калькулятор', 'cta' => 'кнопка в ролике'][$lead['source']] ?? $lead['source'];
-    $digits = preg_replace('/\D+/', '', $lead['phone']);
-    admin_head('Заявка № ' . $id, 'leads');
-    ?>
-    <p class="back"><a href="<?= e(admin_url('leads')) ?>">← Все заявки</a></p>
-    <header class="head">
-      <h1>Заявка № <?= $id ?></h1>
-      <?= status_badge($lead['status']) ?>
-    </header>
-    <div class="lead">
-      <section class="card">
-        <dl class="dl">
-          <dt>Имя</dt><dd><?= e($lead['name']) ?></dd>
-          <dt>Телефон</dt>
-          <dd class="dd-phone">
-            <b><?= e(format_phone($lead['phone'])) ?></b>
-            <a class="btn btn--sm" href="<?= e(tel_href($lead['phone'])) ?>">Позвонить</a>
-            <a class="btn btn--sm" href="https://wa.me/<?= e($digits) ?>" target="_blank" rel="noopener">WhatsApp</a>
-          </dd>
-          <dt>Когда</dt><dd><?= e(date('d.m.Y H:i', strtotime($lead['created_at']))) ?></dd>
-          <?php if ($lead['object_type']): ?><dt>Объект</dt><dd><?= e(object_label($lead['object_type'])) ?></dd><?php endif; ?>
-          <?php if ($calc): ?><dt>Расчёт</dt><dd><?= e($calc) ?></dd><?php endif; ?>
-          <?php if ($lead['comment'] !== ''): ?><dt>Комментарий</dt><dd class="pre"><?= e($lead['comment']) ?></dd><?php endif; ?>
-          <dt>Источник</dt><dd><?= e($src) ?><?php if ($utm): ?> · <?= e(implode(', ', array_map(fn($k, $v) => "$k=$v", array_keys($utm), $utm))) ?><?php endif; ?></dd>
-          <dt>Согласие</dt><dd>дано <?= e(date('d.m.Y H:i', strtotime($lead['consent_at']))) ?>, <a href="<?= base_path() ?>/consent?v=<?= (int)$lead['consent_version'] ?>" target="_blank" rel="noopener">согласие ред. <?= (int)$lead['consent_version'] ?></a>, <a href="<?= base_path() ?>/privacy?v=<?= (int)$lead['privacy_version'] ?>" target="_blank" rel="noopener">политика ред. <?= (int)$lead['privacy_version'] ?></a></dd>
-          <dt>IP</dt><dd><?= e($lead['ip'] ?: 'нет') ?></dd>
-        </dl>
-      </section>
-      <section class="card">
-        <form method="post">
-          <?= csrf_field() ?>
-          <label for="status">Статус</label>
-          <select id="status" name="status">
-            <?php foreach (LEAD_STATUSES as $k => $label): ?>
-              <option value="<?= $k ?>"<?= $lead['status'] === $k ? ' selected' : '' ?>><?= e($label) ?></option>
-            <?php endforeach; ?>
-          </select>
-          <label for="note">Заметка</label>
-          <textarea id="note" name="note" rows="5" placeholder="Например: замер в субботу в 11:00"><?= e($lead['note']) ?></textarea>
-          <button class="btn btn--pri btn--block" type="submit" name="op" value="save">Сохранить</button>
-        </form>
-        <form method="post" class="danger-zone">
-          <?= csrf_field() ?>
-          <p class="muted">Если клиент попросил удалить его данные или отозвал согласие, удалите заявку целиком.</p>
-          <button class="btn btn--danger btn--block" type="submit" name="op" value="delete" data-confirm="Удалить заявку № <?= $id ?> вместе с персональными данными? Отменить нельзя.">Удалить по просьбе клиента</button>
-        </form>
-      </section>
-    </div>
-    <?php
-    admin_foot();
-    break;
-
-/* ---------- выгрузка ---------- */
-case 'export':
-    [$s, $q, $where, $args] = leads_filter();
-    $st = db()->prepare("SELECT * FROM leads $where ORDER BY id DESC");
-    $st->execute($args);
-    header('Content-Type: text/csv; charset=utf-8');
-    header('Content-Disposition: attachment; filename="iriseye-leads-' . date('Y-m-d') . '.csv"');
-    $out = fopen('php://output', 'w');
-    fwrite($out, "\xEF\xBB\xBF");
-    fputcsv($out, ['№', 'Дата', 'Имя', 'Телефон', 'Тип объекта', 'Расчёт', 'Комментарий', 'Статус', 'Заметка', 'Источник', 'UTM', 'Согласие', 'Редакция согласия', 'IP'], ';');
-    foreach ($st as $r) {
-        fputcsv($out, array_map(fn($v) => csv_safe((string)$v), [
-            $r['id'], date('d.m.Y H:i', strtotime($r['created_at'])), $r['name'], format_phone($r['phone']),
-            object_label($r['object_type']), lead_calc_text($r), $r['comment'], LEAD_STATUSES[$r['status']] ?? $r['status'],
-            $r['note'], $r['source'], $r['utm_json'], date('d.m.Y H:i', strtotime($r['consent_at'])), $r['consent_version'], $r['ip'],
-        ]), ';');
-    }
-    fclose($out);
-    exit;
 
 /* ---------- контакты ---------- */
 case 'contacts':
@@ -455,7 +261,7 @@ case 'docs':
     $l = setting('legal');
     if ($isPost) {
         $op = (string)($_POST['op'] ?? 'save');
-        if (preg_match('/^reset:(privacy|consent)$/', $op, $m)) {
+        if (preg_match('/^reset:(privacy)$/', $op, $m)) {
             set_setting('doc_tpl_' . $m[1], '');
             docs_sync();
             flash('ok', 'Текст вернули к заготовке.');
@@ -474,9 +280,9 @@ case 'docs':
             'inn' => $inn, 'ogrn' => $ogrn,
             'address' => mb_substr(trim((string)($_POST['address'] ?? '')), 0, 300),
             'email' => $email,
+            'license' => mb_substr(trim((string)($_POST['license'] ?? '')), 0, 200),
         ]);
-        set_setting('retention_months', max(1, min(60, (int)($_POST['retention'] ?? 12))));
-        foreach (['privacy', 'consent'] as $k) {
+        foreach (['privacy'] as $k) {
             $txt = trim(str_replace("\r\n", "\n", (string)($_POST['tpl_' . $k] ?? '')));
             $def = (require APP_ROOT . '/lib/docs.php')[$k];
             set_setting('doc_tpl_' . $k, $txt === trim($def) ? '' : $txt);
@@ -486,11 +292,21 @@ case 'docs':
         redirect(admin_url('docs'));
     }
     $vp = doc_versions('privacy');
-    $vc = doc_versions('consent');
     admin_head('Документы и реквизиты', 'docs');
     ?>
     <header class="head"><h1>Документы и реквизиты</h1></header>
     <?php if (!legal_filled()): ?><div class="note note--warn">Заполните название, ИНН и email. Без них документы неполные, и сайт рано выкладывать.</div><?php endif; ?>
+    <section class="card">
+      <h2>Что нужно сделать по закону</h2>
+      <p class="muted">Формы заявки на сайте нет, поэтому согласие на обработку данных не собирается: люди звонят или пишут сами, а это другое основание (пункт 5 части 1 статьи 6 закона № 152-ФЗ). Сайт закрывает свою часть требований: политика опубликована, реквизиты в подвале, Метрика ждёт согласия на cookie. Остальное делает владелец, один раз.</p>
+      <ul class="checklist">
+        <li>Заполнить реквизиты выше. Они подставляются в документы и в подвал сайта.</li>
+        <li>Подать уведомление об обработке персональных данных в Роскомнадзор до начала работы с клиентами: <a href="https://pd.rkn.gov.ru/operators-registry/notification/" target="_blank" rel="noopener">pd.rkn.gov.ru</a>. Без уведомления штраф до 300 000 ₽ (часть 10 статьи 13.11 КоАП).</li>
+        <li>Держать сайт и базу на российском хостинге: базы с персональными данными должны находиться в России (часть 5 статьи 18 закона № 152-ФЗ).</li>
+        <li>Оформить внутренние документы: приказ о назначении ответственного (для ООО), правила обработки, оценку вреда субъектам (приказ Роскомнадзора от 27.10.2022 № 178), порядок уничтожения данных.</li>
+        <li>Если данные утекли, сообщить в Роскомнадзор в течение 24 часов, а о результатах расследования в течение 72 часов (часть 3.1 статьи 21 закона № 152-ФЗ).</li>
+      </ul>
+    </section>
     <form method="post" class="card form">
       <?= csrf_field() ?>
       <h2>Оператор персональных данных</h2>
@@ -502,14 +318,15 @@ case 'docs':
       </div>
       <label for="address">Адрес для обращений</label>
       <input id="address" name="address" value="<?= e($l['address']) ?>" placeholder="603000, г. Нижний Новгород, ...">
-      <div class="grid2">
-        <div><label for="email">Email для запросов</label><input id="email" name="email" type="email" value="<?= e($l['email']) ?>"></div>
-        <div><label for="retention">Сколько хранить заявки, месяцев</label><input id="retention" name="retention" value="<?= (int)setting('retention_months') ?>" inputmode="numeric"></div>
-      </div>
+      <label for="license">Лицензия МЧС на монтаж пожарной сигнализации и оповещения</label>
+      <input id="license" name="license" value="<?= e($l['license'] ?? '') ?>" placeholder="Лицензия МЧС № 52-Б/00123 от 01.01.2024">
+      <p class="muted">Монтаж АПС и СОУЭ лицензируется. Номер попадёт в подвал сайта. Если лицензии нет, уберите пожарные услуги из описаний: за рекламу лицензируемых работ без лицензии штрафуют отдельно.</p>
+      <label for="email">Email для запросов по персональным данным</label>
+      <input id="email" name="email" type="email" value="<?= e($l['email']) ?>">
 
       <h2>Тексты</h2>
-      <p class="muted">Метки подставятся сами: {operator} {inn} {ogrn} {address} {email} {phone} {retention} {site}. «## » в начале строки делает заголовок, «- » делает пункт списка. Перед запуском тексты стоит показать юристу.</p>
-      <?php foreach (['privacy' => 'Политика обработки персональных данных', 'consent' => 'Согласие на обработку персональных данных'] as $k => $title): ?>
+      <p class="muted">Метки подставятся сами: {operator} {inn} {ogrn} {address} {email} {phone} {site}. «## » в начале строки делает заголовок, «- » делает пункт списка. Перед запуском тексты стоит показать юристу.</p>
+      <?php foreach (['privacy' => 'Политика обработки персональных данных'] as $k => $title): ?>
         <label for="tpl_<?= $k ?>"><?= e($title) ?></label>
         <textarea id="tpl_<?= $k ?>" name="tpl_<?= $k ?>" rows="14" class="mono"><?= e(doc_template($k)) ?></textarea>
         <p class="row-links">
@@ -521,95 +338,15 @@ case 'docs':
     </form>
     <section class="card">
       <h2>Редакции</h2>
-      <p class="muted">С каждой заявкой хранится номер редакции согласия, которую видел клиент.</p>
+      <p class="muted">Каждая правка текста создаёт новую редакцию, старые остаются доступными по ссылке.</p>
       <div class="grid2">
-        <?php foreach (['privacy' => ['Политика', $vp], 'consent' => ['Согласие', $vc]] as $k => [$t, $vs]): ?>
+        <?php foreach (['privacy' => ['Политика', $vp]] as $k => [$t, $vs]): ?>
           <div><h3><?= e($t) ?></h3><ul class="versions">
             <?php foreach ($vs as $v): ?><li><a href="<?= base_path() ?>/<?= $k ?>?v=<?= (int)$v['version'] ?>" target="_blank" rel="noopener">ред. <?= (int)$v['version'] ?></a> от <?= e(date('d.m.Y H:i', strtotime($v['created_at']))) ?></li><?php endforeach; ?>
           </ul></div>
         <?php endforeach; ?>
       </div>
     </section>
-    <?php
-    admin_foot();
-    break;
-
-/* ---------- уведомления ---------- */
-case 'notify':
-    $n = setting('notify');
-    $chats = [];
-    if ($isPost) {
-        $op = (string)($_POST['op'] ?? 'save');
-        $tok = trim((string)($_POST['tg_token'] ?? ''));
-        if ($tok !== '') $n['tg_token'] = $tok;
-        if (isset($_POST['tg_chat'])) $n['tg_chat'] = preg_replace('/[^0-9\-@A-Za-z_]/', '', (string)$_POST['tg_chat']);
-        $n['tg_with_pd'] = !empty($_POST['tg_with_pd']);
-        $email = trim((string)($_POST['email'] ?? ''));
-        if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) { flash('error', 'Проверьте email.'); redirect(admin_url('notify')); }
-        $n['email'] = $email;
-        if ($op === 'forget') $n['tg_token'] = '';
-        set_setting('notify', $n);
-        docs_sync();
-        if ($op === 'test') {
-            if (!$n['tg_token'] || !$n['tg_chat']) { flash('error', 'Сначала укажите токен бота и chat id.'); redirect(admin_url('notify')); }
-            $r = tg_api($n['tg_token'], 'sendMessage', ['chat_id' => $n['tg_chat'], 'text' => 'Проверка уведомлений сайта АЙРИС. Если вы это видите, всё работает.']);
-            flash(($r['ok'] ?? false) ? 'ok' : 'error', ($r['ok'] ?? false) ? 'Сообщение отправлено. Проверьте Telegram.' : 'Telegram ответил ошибкой: ' . ($r['description'] ?? 'неизвестно'));
-            redirect(admin_url('notify'));
-        }
-        if ($op === 'find') {
-            if (!$n['tg_token']) { flash('error', 'Сначала вставьте токен бота.'); redirect(admin_url('notify')); }
-            $r = tg_api($n['tg_token'], 'getUpdates', ['limit' => 50]);
-            if (!($r['ok'] ?? false)) { flash('error', 'Telegram ответил ошибкой: ' . ($r['description'] ?? 'неизвестно')); redirect(admin_url('notify')); }
-            foreach ($r['result'] ?? [] as $u) {
-                $ch = $u['message']['chat'] ?? $u['my_chat_member']['chat'] ?? $u['channel_post']['chat'] ?? null;
-                if ($ch) $chats[(string)$ch['id']] = trim(($ch['title'] ?? '') ?: (($ch['first_name'] ?? '') . ' ' . ($ch['last_name'] ?? '') . (isset($ch['username']) ? ' @' . $ch['username'] : '')));
-            }
-            if (!$chats) flash('info', 'Бот пока не видит чатов. Напишите боту любое сообщение и нажмите «Найти chat id» ещё раз.');
-            else $_SESSION['tg_chats'] = $chats;
-            redirect(admin_url('notify'));
-        }
-        flash('ok', 'Сохранено.');
-        redirect(admin_url('notify'));
-    }
-    $chats = $_SESSION['tg_chats'] ?? [];
-    unset($_SESSION['tg_chats']);
-    admin_head('Уведомления', 'notify');
-    ?>
-    <header class="head"><h1>Уведомления о заявках</h1></header>
-    <form method="post" class="card form">
-      <?= csrf_field() ?>
-      <h2>Telegram</h2>
-      <ol class="steps">
-        <li>В Telegram откройте @BotFather, отправьте /newbot и получите токен.</li>
-        <li>Вставьте токен ниже и нажмите «Сохранить».</li>
-        <li>Напишите своему боту любое сообщение (или добавьте его в рабочую группу).</li>
-        <li>Нажмите «Найти chat id», выберите чат, потом «Отправить проверку».</li>
-      </ol>
-      <label for="tg_token">Токен бота</label>
-      <input id="tg_token" name="tg_token" type="password" autocomplete="off" placeholder="<?= $n['tg_token'] ? 'Токен сохранён. Введите новый, чтобы заменить' : '123456789:AA...' ?>">
-      <label for="tg_chat">Chat id</label>
-      <input id="tg_chat" name="tg_chat" value="<?= e($n['tg_chat']) ?>" placeholder="например, 123456789">
-      <?php if ($chats): ?>
-        <div class="chats">
-          <p class="muted">Бот видит эти чаты. Нажмите на нужный:</p>
-          <?php foreach ($chats as $id => $title): ?><button type="button" class="chip" data-chat="<?= e($id) ?>"><?= e($title ?: 'чат') ?> · <?= e($id) ?></button><?php endforeach; ?>
-        </div>
-      <?php endif; ?>
-      <label class="checkline"><input type="checkbox" name="tg_with_pd" value="1"<?= !empty($n['tg_with_pd']) ? ' checked' : '' ?>> Присылать имя и телефон прямо в Telegram</label>
-      <p class="muted small">По умолчанию в Telegram приходит только номер заявки и ссылка в админку. Имя и телефон в сообщении означают передачу персональных данных на зарубежные серверы Telegram. По 152-ФЗ для этого нужно уведомить Роскомнадзор. Включайте, только если это сделано.</p>
-
-      <h2>Почта (по желанию)</h2>
-      <label for="nemail">Email для копии уведомлений</label>
-      <input id="nemail" name="email" type="email" value="<?= e($n['email']) ?>" placeholder="info@iriseye.ru">
-      <p class="muted small">Письма отправляет сам хостинг. Если они попадают в спам, пользуйтесь Telegram.</p>
-
-      <div class="bar">
-        <button class="btn btn--pri" type="submit" name="op" value="save">Сохранить</button>
-        <button class="btn" type="submit" name="op" value="find">Найти chat id</button>
-        <button class="btn" type="submit" name="op" value="test">Отправить проверку</button>
-        <?php if ($n['tg_token']): ?><button class="btn btn--ghost-danger" type="submit" name="op" value="forget" data-confirm="Удалить сохранённый токен?">Удалить токен</button><?php endif; ?>
-      </div>
-    </form>
     <?php
     admin_foot();
     break;
@@ -650,5 +387,5 @@ case 'password':
     break;
 
 default:
-    redirect(admin_url('leads'));
+    redirect(admin_url('contacts'));
 }

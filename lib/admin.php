@@ -3,14 +3,12 @@
 declare(strict_types=1);
 
 const ADMIN_PAGES = [
-    'leads'    => ['Заявки', 'inbox'],
     'contacts' => ['Контакты и часы', 'phone'],
     'prices'   => ['Цены калькулятора', 'calc'],
     'works'    => ['Наши объекты', 'photo'],
     'reviews'  => ['Отзывы', 'quote'],
     'faq'      => ['Вопросы', 'help'],
     'docs'     => ['Документы и реквизиты', 'doc'],
-    'notify'   => ['Уведомления', 'bell'],
     'password' => ['Пароль', 'lock'],
 ];
 
@@ -30,7 +28,7 @@ function setup_key_drop(): void
     @unlink(data_dir() . DIRECTORY_SEPARATOR . 'setup.key');
 }
 
-function admin_url(string $page = 'leads', array $q = []): string
+function admin_url(string $page = 'contacts', array $q = []): string
 {
     $q = array_merge(['p' => $page], $q);
     return base_path() . '/admin/?' . http_build_query($q);
@@ -63,8 +61,6 @@ function admin_head(string $title, string $active = ''): void
     $bp = base_path();
     $user = admin_user();
     $flash = take_flash();
-    $newCount = 0;
-    try { $newCount = (int)db()->query("SELECT COUNT(*) FROM leads WHERE status = 'new'")->fetchColumn(); } catch (Throwable $e) { }
     ?><!doctype html>
 <html lang="ru">
 <head>
@@ -86,13 +82,13 @@ function admin_head(string $title, string $active = ''): void
 </header>
 <nav class="side" aria-label="Разделы админки">
   <?php foreach (ADMIN_PAGES as $key => [$label, $ico]): ?>
-    <a href="<?= e(admin_url($key)) ?>" class="<?= $active === $key ? 'on' : '' ?>"<?= $active === $key ? ' aria-current="page"' : '' ?>><?= admin_icon($ico) ?><span><?= e($label) ?></span><?php if ($key === 'leads' && $newCount): ?><b class="badge"><?= $newCount ?></b><?php endif; ?></a>
+    <a href="<?= e(admin_url($key)) ?>" class="<?= $active === $key ? 'on' : '' ?>"<?= $active === $key ? ' aria-current="page"' : '' ?>><?= admin_icon($ico) ?><span><?= e($label) ?></span></a>
   <?php endforeach; ?>
 </nav>
 <?php endif; ?>
 <main class="main" id="main">
 <?php if ($user && !legal_filled() && $active !== 'docs'): ?>
-  <div class="note note--warn">Заполните реквизиты в разделе <a href="<?= e(admin_url('docs')) ?>">«Документы и реквизиты»</a>. Без них политика и согласие неполные, и сайт рано выкладывать.</div>
+  <div class="note note--warn">Заполните реквизиты в разделе <a href="<?= e(admin_url('docs')) ?>">«Документы и реквизиты»</a>. Без них политика неполная и реквизитов нет в подвале сайта.</div>
 <?php endif; ?>
 <?php if ($flash): ?>
   <div class="note note--<?= e($flash[0]) ?>" role="status"><?= e($flash[1]) ?></div>
@@ -109,21 +105,6 @@ function admin_foot(): void
 </body>
 </html>
 <?php
-}
-
-function status_badge(string $s): string
-{
-    return '<span class="st st--' . e($s) . '">' . e(LEAD_STATUSES[$s] ?? $s) . '</span>';
-}
-
-function object_label(string $k): string { return OBJECT_TYPES[$k] ?? ''; }
-
-function lead_calc_text(array $lead): string
-{
-    if ($lead['calc_json'] === '') return '';
-    $c = json_decode($lead['calc_json'], true);
-    if (!is_array($c)) return '';
-    return isset($c['text']) ? (string)$c['text'] : calc_summary($c);
 }
 
 /**

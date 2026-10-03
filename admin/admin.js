@@ -7,10 +7,6 @@
     if (b && !window.confirm(b.dataset.confirm)) e.preventDefault();
   });
   // Выбор чата Telegram из найденных
-  document.querySelectorAll('[data-chat]').forEach(ch => ch.addEventListener('click', () => {
-    const input = document.getElementById('tg_chat');
-    if (input) { input.value = ch.dataset.chat; input.focus(); }
-  }));
   // Предупреждение о несохранённых правках
   let dirty = false;
   document.querySelectorAll('form').forEach(f => {

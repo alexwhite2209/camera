@@ -20,7 +20,7 @@
 <link rel="preload" href="./assets/fonts/Tektur-500-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="./assets/img/logo-512.png" as="image">
 <link rel="stylesheet" href="./assets/css/fonts.css">
-<link rel="stylesheet" href="./assets/css/site.css?v=f6bf61b4">
+<link rel="stylesheet" href="./assets/css/site.css?v=55f7d080">
 <script>document.documentElement.className='js';</script>
 <noscript><style>.intro{display:none!important}.hero{height:auto!important}.stage{position:relative!important}.plate[data-plate="1"]{opacity:1!important;visibility:visible!important}</style></noscript>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"LocalBusiness","name":"АЙРИС","description":"Монтаж видеонаблюдения, СКУД, охранной и пожарной сигнализации и систем оповещения под ключ","url":"https://iriseye.ru/","image":"https://iriseye.ru/assets/img/og.jpg","logo":"https://iriseye.ru/assets/img/logo-512.png","telephone":"+79867484446","areaServed":"Нижегородская область","openingHours":"Mo-Su 08:00-19:00"}</script>
@@ -32,6 +32,7 @@
   <symbol id="i-phone" viewBox="0 0 24 24"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
   <symbol id="i-wa" viewBox="0 0 24 24"><path d="M3 21l1.65-3.8A9 9 0 1 1 7.8 19.6L3 21" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 10a.5.5 0 0 0 1 0V9a.5.5 0 0 0-1 0v1a5 5 0 0 0 5 5h1a.5.5 0 0 0 0-1h-1a.5.5 0 0 0 0 1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
   <symbol id="i-tg" viewBox="0 0 24 24"><path d="M15 10l-4 4 6 6 4-16-18 7 4 2 2 6 3-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-mail" viewBox="0 0 24 24"><path d="M3 7h18v10H3z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 7l9 6 9-6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
   <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
   <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
   <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
@@ -427,7 +428,7 @@
         <p class="price"><span class="sr-only" id="priceSr">от 30 000 ₽</span><span aria-hidden="true" id="priceNum">от <span class="nf" id="nf">30 000</span> ₽</span><span aria-hidden="true" class="price__est" id="priceEst" hidden>по смете</span></p>
         <ul class="calc__lines" id="calcLines"></ul>
         <p class="calc__note">Оборудование среднего ценового сегмента и монтаж. Точная смета после осмотра объекта.</p>
-        <button class="btn btn--primary btn--shine btn--block" type="button" id="calcGo">Записаться на замер</button>
+        <button class="btn btn--primary btn--shine btn--block" type="button" id="calcGo">Обсудить замер</button>
       </aside>
     </form>
   </div>
@@ -621,83 +622,38 @@
   </div>
 </section>
 
-<!-- Контакты и форма -->
+<!-- Контакты -->
 <section class="section contact" id="contact" aria-labelledby="contactTitle">
   <div class="wrap contact__grid">
     <div class="contact__info" data-reveal>
       <p class="kicker">Связаться</p>
       <h2 class="h2" id="contactTitle">Готовы обсудить ваш объект?</h2>
-      <p class="lead">Оставьте заявку. Бесплатно проконсультируем и составим предварительную смету.</p>
+      <p class="lead">Позвоните или напишите на почту. Проконсультируем бесплатно и составим предварительную смету.</p>
       <a class="contact__phone" href="tel:+79867484446">+7 (986) 748-44-46</a>
       <p class="contact__hours">Ежедневно с 8:00 до 19:00</p>
-      <a class="contact__mail" href="mailto:iris.control@yandex.ru">iris.control@yandex.ru</a>      <div class="contact__msg">
-        <a class="btn btn--ghost" href="https://wa.me/79867484446" target="_blank" rel="noopener"><svg class="i" aria-hidden="true"><use href="#i-wa"/></svg>WhatsApp</a>
-        <a class="btn btn--ghost" href="https://t.me/airis_security" target="_blank" rel="noopener"><svg class="i" aria-hidden="true"><use href="#i-tg"/></svg>Telegram</a>
-      </div>
+      <a class="contact__mail" href="mailto:iris.control@yandex.ru">iris.control@yandex.ru</a>      <p class="contact__region">Нижний Новгород и Нижегородская область</p>
     </div>
 
-    <div class="formcard" data-reveal>
+    <div class="callcard" data-reveal>
       <span class="spot" aria-hidden="true"></span>
-      <form class="lead-form" id="leadForm" novalidate>
-        <input type="hidden" name="token" value="">
-        <div class="hp" aria-hidden="true"><label>Сайт <input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
 
-        <div class="calc-chip" id="calcChip" hidden>
-          <span>Ваш расчёт: <b id="calcChipText"></b></span>
-          <button type="button" id="calcChipX" aria-label="Убрать расчёт из заявки"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
-        </div>
-
-        <div class="field">
-          <label for="fName">Как к вам обращаться</label>
-          <input id="fName" name="name" type="text" autocomplete="name" maxlength="60" required aria-describedby="eName">
-          <p class="err" id="eName" role="alert"></p>
-        </div>
-        <div class="field">
-          <label for="fPhone">Телефон</label>
-          <input id="fPhone" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+7 (___) ___-__-__" required aria-describedby="ePhone">
-          <p class="err" id="ePhone" role="alert"></p>
-        </div>
-        <div class="field">
-          <label for="fObj">Тип объекта</label>
-          <select id="fObj" name="object_type">
-            <option value="">Выберите, если знаете</option>
-                          <option value="house">Частный дом</option>
-                          <option value="office">Офис или магазин</option>
-                          <option value="warehouse">Склад или производство</option>
-                          <option value="other">Другое</option>
-                      </select>
-        </div>
-        <div class="field">
-          <label for="fComment">Комментарий</label>
-          <textarea id="fComment" name="comment" rows="3" maxlength="1000" placeholder="Например: нужно видеть въезд и калитку"></textarea>
-        </div>
-        <div class="field field--check">
-          <label class="check">
-            <input type="checkbox" name="consent" id="fConsent" aria-describedby="eConsent">
-            <span class="check__box" aria-hidden="true"><svg class="i" aria-hidden="true"><use href="#i-check"/></svg></span>
-            <span>Я даю <a href="./consent.html" target="_blank">согласие на обработку персональных данных</a></span>
-          </label>
-          <p class="err" id="eConsent" role="alert"></p>
-        </div>
-        <button class="btn btn--primary btn--block btn--arrow" type="submit" id="leadSubmit"><span>Отправить заявку</span><svg class="i" aria-hidden="true"><use href="#i-arrow"/></svg></button>
-        <p class="form-note">Перезвоним в рабочее время. Подробнее в <a href="./privacy.html" target="_blank">Политике обработки персональных данных</a>.</p>
-      </form>
-
-      <div class="form-state form-state--ok" id="formOk" hidden tabindex="-1">
-        <svg class="iris iris--ok" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="21" pathLength="100"/><path d="M15 24.5l6 6 12-12" pathLength="100"/></svg>
-        <h3>Заявка принята</h3>
-        <p>Перезвоним ежедневно с 8:00 до 19:00. Если срочно, звоните: <a href="tel:+79867484446">+7 (986) 748-44-46</a></p>
+      <div class="calc-chip" id="calcChip" hidden>
+        <span>Ваш расчёт: <b id="calcChipText"></b></span>
+        <button type="button" id="calcChipX" aria-label="Убрать расчёт из сообщения"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
       </div>
-      <div class="form-state form-state--fail" id="formFail" hidden tabindex="-1">
-        <h3 id="failTitle">Не удалось отправить</h3>
-        <p id="failText">Отправьте ту же заявку в мессенджер, текст уже готов.</p>
-        <div class="contact__msg">
-          <a class="btn btn--primary" id="failWa" href="https://wa.me/79867484446" target="_blank" rel="noopener"><svg class="i" aria-hidden="true"><use href="#i-wa"/></svg>WhatsApp</a>
-          <a class="btn btn--ghost" id="failTg" href="https://t.me/airis_security" target="_blank" rel="noopener"><svg class="i" aria-hidden="true"><use href="#i-tg"/></svg>Telegram</a>
-        </div>
-        <p class="form-note" id="failTgNote" hidden>Текст заявки скопирован. Вставьте его в чат.</p>
-        <button class="linkbtn" type="button" id="failRetry">Попробовать ещё раз</button>
+
+      <h3 class="callcard__h">Как с нами связаться</h3>
+      <p class="callcard__p">Позвоните, и мы сразу подскажем, что подойдёт объекту. Если удобнее письмом, напишите на почту: расчёт из калькулятора подставится в текст сам.</p>
+
+      <a class="btn btn--primary btn--block btn--arrow callcard__call" href="tel:+79867484446" id="callBtn"><span>Позвонить +7 (986) 748-44-46</span><svg class="i" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+            <a class="btn btn--ghost btn--block" id="mailBtn" data-mail="iris.control@yandex.ru" href="mailto:iris.control@yandex.ru"><svg class="i" aria-hidden="true"><use href="#i-mail"/></svg>Написать на почту</a>
+      
+      <div class="contact__msg">
+        <a class="btn btn--ghost" id="waBtn" href="https://wa.me/79867484446" target="_blank" rel="noopener"><svg class="i" aria-hidden="true"><use href="#i-wa"/></svg>WhatsApp</a>
+        <a class="btn btn--ghost" id="tgBtn" href="https://t.me/airis_security" target="_blank" rel="noopener"><svg class="i" aria-hidden="true"><use href="#i-tg"/></svg>Telegram</a>
       </div>
+      <p class="form-note" id="tgNote" hidden>Текст с расчётом скопирован. Вставьте его в чат.</p>
+      <p class="form-note">Отвечаем ежедневно с 8:00 до 19:00. Что мы делаем с данными, написано в <a href="./privacy.html" target="_blank">Политике обработки персональных данных</a>.</p>
     </div>
   </div>
 </section>
@@ -716,9 +672,8 @@
       <p class="foot__mail"><a href="mailto:iris.control@yandex.ru">iris.control@yandex.ru</a></p>    </div>
     <div class="foot__col">
       <a href="./privacy.html">Политика обработки персональных данных</a>
-      <a href="./consent.html">Согласие на обработку персональных данных</a>
       <p class="foot__copy">© 2026 АЙРИС</p>
-    </div>
+          </div>
   </div>
 </footer>
 
@@ -742,6 +697,6 @@
   <p id="lbCap"></p>
 </dialog>
 
-<script src="./assets/js/site.js?v=1485e5ce" defer></script>
+<script src="./assets/js/site.js?v=eac3550f" defer></script>
 </body>
 </html>

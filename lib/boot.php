@@ -50,32 +50,11 @@ function db(): PDO
 function migrate(PDO $pdo): void
 {
     $v = (int)$pdo->query('PRAGMA user_version')->fetchColumn();
-    if ($v >= 3) return;
+    if ($v >= 6) return;
     if ($v < 1) {
     $pdo->beginTransaction();
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
-        CREATE TABLE IF NOT EXISTS leads (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            created_at TEXT NOT NULL,
-            name TEXT NOT NULL,
-            phone TEXT NOT NULL,
-            object_type TEXT NOT NULL DEFAULT '',
-            comment TEXT NOT NULL DEFAULT '',
-            calc_json TEXT NOT NULL DEFAULT '',
-            source TEXT NOT NULL DEFAULT '',
-            page TEXT NOT NULL DEFAULT '',
-            utm_json TEXT NOT NULL DEFAULT '',
-            status TEXT NOT NULL DEFAULT 'new',
-            note TEXT NOT NULL DEFAULT '',
-            consent_at TEXT NOT NULL,
-            consent_version INTEGER NOT NULL,
-            privacy_version INTEGER NOT NULL,
-            ip TEXT NOT NULL DEFAULT '',
-            ua TEXT NOT NULL DEFAULT '',
-            updated_at TEXT NOT NULL
-        );
-        CREATE INDEX IF NOT EXISTS leads_status ON leads(status, created_at);
         CREATE TABLE IF NOT EXISTS docs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             kind TEXT NOT NULL,
@@ -110,17 +89,8 @@ function migrate(PDO $pdo): void
     $pdo->commit();
     docs_sync($pdo);
     }
-    // почта для заявок появилась позже: вписываем её базам, созданным раньше
+    // шаг 2 настраивал уведомления о заявках, их больше нет: просто отмечаем версию
     if ($v < 2) {
-        $st = $pdo->prepare('SELECT value FROM settings WHERE key = ?');
-        $st->execute(['notify']);
-        $raw = $st->fetchColumn();
-        $n = is_string($raw) ? (json_decode($raw, true) ?: []) : [];
-        if (empty($n['email'])) {
-            $n['email'] = defaults()['notify']['email'];
-            $pdo->prepare('INSERT INTO settings(key, value) VALUES(?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value')
-                ->execute(['notify', json_encode($n, JSON_UNESCAPED_UNICODE)]);
-        }
         $pdo->exec('PRAGMA user_version = 2');
     }
     if ($v < 3) {
@@ -137,6 +107,24 @@ function migrate(PDO $pdo): void
             docs_sync($pdo); // в документах появился адрес для запросов по персональным данным
         }
         $pdo->exec('PRAGMA user_version = 3');
+    }
+    // тексты документов переписаны под требования, действующие с 1 сентября 2025 года
+    if ($v < 4) {
+        docs_sync($pdo);
+        $pdo->exec('PRAGMA user_version = 4');
+    }
+    // Форма заявки убрана с сайта: согласие больше не собирается, значит хранить
+    // его редакции и сами заявки незачем, а держать персональные данные без цели нельзя.
+    if ($v < 5) {
+        $pdo->exec('DROP TABLE IF EXISTS leads');
+        $pdo->exec("DELETE FROM docs WHERE kind = 'consent'");
+        docs_sync($pdo);
+        $pdo->exec('PRAGMA user_version = 5');
+    }
+    // настройки уведомлений и срока хранения заявок остались от формы, они больше не читаются
+    if ($v < 6) {
+        $pdo->exec("DELETE FROM settings WHERE key IN ('notify', 'retention_months', 'doc_tpl_consent')");
+        $pdo->exec('PRAGMA user_version = 6');
     }
 }
 
@@ -264,22 +252,6 @@ function secret(): string
 }
 
 /** Подписанная метка времени для формы: отсекает ботов, которые отправляют форму мгновенно. */
-function form_token(): string
-{
-    $t = (string)time();
-    return $t . '.' . substr(hash_hmac('sha256', $t, secret()), 0, 32);
-}
-
-function form_token_ok(string $tok, int $minAge = 3, int $maxAge = 86400): bool
-{
-    $parts = explode('.', $tok, 2);
-    if (count($parts) !== 2 || !ctype_digit($parts[0])) return false;
-    $sig = substr(hash_hmac('sha256', $parts[0], secret()), 0, 32);
-    if (!hash_equals($sig, $parts[1])) return false;
-    $age = time() - (int)$parts[0];
-    return $age >= $minAge && $age <= $maxAge;
-}
-
 function throttle_count(string $key, int $window): int
 {
     $st = db()->prepare('SELECT COUNT(*) FROM throttle WHERE k = ? AND t > ?');
@@ -329,96 +301,8 @@ function tel_href(string $p): string
 
 // ---------- справочники ----------
 
-const OBJECT_TYPES = [
-    'house'     => 'Частный дом',
-    'office'    => 'Офис или магазин',
-    'warehouse' => 'Склад или производство',
-    'other'     => 'Другое',
-];
-
-const LEAD_STATUSES = [
-    'new'     => 'Новая',
-    'work'    => 'В работе',
-    'measure' => 'Замер назначен',
-    'done'    => 'Закрыта',
-    'spam'    => 'Спам',
-];
-
 const CALC_OBJECTS = ['house' => 'Жилой дом', 'flat' => 'Магазин', 'office' => 'Офис', 'warehouse' => 'Склад или цех'];
-const CALC_SYSTEMS = ['cctv' => 'камеры', 'access' => 'СКУД', 'fire' => 'АПС', 'soue' => 'СОУЭ'];
 const CALC_POINTS  = ['2-4', '5-8', '9-16', '17+'];
-
-/** Приводит выбор в калькуляторе к одному виду. Понимает и старый формат со svc. */
-function calc_norm(array $c): ?array
-{
-    $obj = (string)($c['obj'] ?? '');
-    if (!isset(CALC_OBJECTS[$obj])) return null;
-    $sel = [];
-    if (isset($c['svc'])) {
-        $svc = (string)$c['svc'];
-        $sel = ['cctv' => in_array($svc, ['cctv', 'both'], true), 'access' => in_array($svc, ['access', 'both'], true)];
-    } else {
-        foreach (array_keys(CALC_SYSTEMS) as $k) $sel[$k] = !empty($c['sel'][$k]);
-    }
-    $sel += ['cctv' => false, 'access' => false, 'fire' => false, 'soue' => false];
-    if (!in_array(true, $sel, true)) return null;
-    $pts = (int)($c['pts'] ?? 0);
-    if ($pts < 0 || $pts > 3) $pts = 0;
-    return [
-        'obj' => $obj, 'sel' => $sel, 'pts' => $pts,
-        'night' => $sel['cctv'] && !empty($c['night']),
-        'archive' => $sel['cctv'] && !empty($c['archive']),
-    ];
-}
-
-/**
- * Та же формула, что на сайте: сервер пересчитывает цену сам и не верит браузеру.
- * АПС и СОУЭ с ценой 0 считаются «по смете» и в сумму не входят.
- */
-function calc_eval(array $c): ?array
-{
-    $c = calc_norm($c);
-    if (!$c) return null;
-    $p = setting('prices');
-    $s = $c['sel']; $o = $c['obj']; $pt = $c['pts'];
-    $sum = 0;
-    if ($s['cctv']) $sum += (int)($p['cctv'][$o][$pt] ?? 0);
-    if ($s['access']) $sum += (int)($p['access'][$pt] ?? 0);
-    if ($s['cctv'] && $s['access']) $sum = (int)round($sum * (100 - (int)$p['both_discount']) / 100);
-    if ($c['night']) $sum += (int)$p['night'];
-    if ($c['archive']) $sum += (int)$p['archive'];
-    $est = [];
-    foreach (['fire' => 'АПС', 'soue' => 'СОУЭ'] as $k => $label) {
-        if (!$s[$k]) continue;
-        $v = (int)($p[$k][$o] ?? 0);
-        if ($v > 0) $sum += $v;
-        else $est[] = $label;
-    }
-    return ['sum' => $sum, 'estimate' => $est, 'c' => $c];
-}
-
-function calc_price(array $c): ?int
-{
-    $r = calc_eval($c);
-    return $r ? $r['sum'] : null;
-}
-
-function calc_summary(array $c): string
-{
-    $r = calc_eval($c);
-    if (!$r) return '';
-    $n = $r['c'];
-    $sys = [];
-    foreach (CALC_SYSTEMS as $k => $label) if ($n['sel'][$k]) $sys[] = $label;
-    $parts = [CALC_OBJECTS[$n['obj']] . ': ' . implode(', ', $sys)];
-    if ($n['sel']['cctv'] || $n['sel']['access']) $parts[] = CALC_POINTS[$n['pts']] . ($n['pts'] === 0 ? ' точки' : ' точек');
-    if ($n['night']) $parts[] = 'цветное ночное видение';
-    if ($n['archive']) $parts[] = 'архив больше 30 дней';
-    $txt = implode(', ', $parts);
-    if ($r['sum'] > 0) $txt .= ': от ' . number_format($r['sum'], 0, ',', ' ') . ' ₽';
-    if ($r['estimate']) $txt .= $r['sum'] > 0 ? ' + ' . implode(' и ', $r['estimate']) . ' по смете' : ', по смете';
-    return $txt;
-}
 
 // ---------- объекты (фото) ----------
 
@@ -457,11 +341,21 @@ function doc_vars(): array
         '{address}'   => trim((string)$l['address']) ?: $blank,
         '{email}'     => trim((string)($l['email'] ?: $c['email'])) ?: $blank,
         '{phone}'     => (string)$c['phone'],
-        '{retention}' => (string)(int)setting('retention_months'),
-        '{tg_note}'   => !empty(setting('notify')['tg_with_pd'])
-            ? 'в уведомлении передаются имя, телефон и суть заявки, поэтому они проходят через серверы Telegram'
-            : 'в уведомлении есть только номер заявки, без имени и телефона',
     ];
+}
+
+/** Описывает канал Telegram так, как он настроен сейчас. */
+/** Строка реквизитов для подвала: без неё сайт нарушает требования к сведениям о владельце. */
+function legal_line(): string
+{
+    $l = setting('legal');
+    $parts = [];
+    if (trim((string)$l['operator']) !== '') $parts[] = trim((string)$l['operator']);
+    if (trim((string)$l['inn']) !== '')      $parts[] = 'ИНН ' . trim((string)$l['inn']);
+    if (trim((string)$l['ogrn']) !== '')     $parts[] = 'ОГРН ' . trim((string)$l['ogrn']);
+    if (trim((string)$l['address']) !== '')  $parts[] = trim((string)$l['address']);
+    if (trim((string)($l['license'] ?? '')) !== '') $parts[] = trim((string)$l['license']);
+    return $parts ? implode(' · ', $parts) : '';
 }
 
 /** Создаёт новую редакцию документа, если текст с подставленными реквизитами изменился. */
@@ -469,7 +363,7 @@ function docs_sync(?PDO $pdo = null): void
 {
     $pdo ??= db();
     $vars = doc_vars();
-    foreach (['privacy', 'consent'] as $kind) {
+    foreach (['privacy'] as $kind) {
         $tpl = doc_template($kind);
         $rendered = strtr($tpl, $vars);
         $st = $pdo->prepare('SELECT version, rendered FROM docs WHERE kind = ? ORDER BY version DESC LIMIT 1');
@@ -528,62 +422,6 @@ function legal_filled(): bool
 {
     $l = setting('legal');
     return trim((string)$l['operator']) !== '' && trim((string)$l['inn']) !== '' && trim((string)($l['email'] ?: setting('contacts')['email'])) !== '';
-}
-
-// ---------- хранение заявок ----------
-
-function purge_old_leads(): int
-{
-    $months = max(1, (int)setting('retention_months'));
-    $cut = date('Y-m-d H:i:s', strtotime("-$months months"));
-    $st = db()->prepare('DELETE FROM leads WHERE created_at < ?');
-    $st->execute([$cut]);
-    return $st->rowCount();
-}
-
-// ---------- уведомления ----------
-
-function tg_api(string $token, string $method, array $params = []): array
-{
-    if (!preg_match('/^\d{5,}:[A-Za-z0-9_-]{20,}$/', $token)) return ['ok' => false, 'description' => 'Неверный формат токена'];
-    $ch = curl_init("https://api.telegram.org/bot{$token}/{$method}");
-    curl_setopt_array($ch, [
-        CURLOPT_POST => true,
-        CURLOPT_POSTFIELDS => http_build_query($params),
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT => 5,
-        CURLOPT_CONNECTTIMEOUT => 3,
-    ]);
-    $res = curl_exec($ch);
-    $err = curl_error($ch);
-    curl_close($ch);
-    if ($res === false) return ['ok' => false, 'description' => $err ?: 'Нет связи с Telegram'];
-    $j = json_decode((string)$res, true);
-    return is_array($j) ? $j : ['ok' => false, 'description' => 'Непонятный ответ Telegram'];
-}
-
-function notify_lead(int $id, array $lead): void
-{
-    $n = setting('notify');
-    $lines = ["Новая заявка №{$id} на сайте АЙРИС"];
-    if (!empty($lead['object_type']) && isset(OBJECT_TYPES[$lead['object_type']])) $lines[] = 'Объект: ' . OBJECT_TYPES[$lead['object_type']];
-    if (!empty($lead['calc_text'])) $lines[] = 'Расчёт: ' . $lead['calc_text'];
-    $pd = ['Имя: ' . $lead['name'], 'Телефон: ' . format_phone($lead['phone'])];
-    if (!empty($lead['comment'])) $pd[] = 'Комментарий: ' . $lead['comment'];
-    $link = 'Открыть: ' . site_url() . '/admin/?p=lead&id=' . $id;
-    // в Telegram имя и телефон уходят только по разрешению: его серверы за границей
-    $text = implode("\n", array_merge($lines, !empty($n['tg_with_pd']) ? $pd : [], [$link]));
-    // в письме они есть всегда: почта оператора, ящик на российской почте
-    $mailText = implode("\n", array_merge($lines, $pd, [$link]));
-
-    if (!empty($n['tg_token']) && !empty($n['tg_chat'])) {
-        tg_api((string)$n['tg_token'], 'sendMessage', ['chat_id' => (string)$n['tg_chat'], 'text' => $text, 'disable_web_page_preview' => 'true']);
-    }
-    if (!empty($n['email']) && filter_var($n['email'], FILTER_VALIDATE_EMAIL)) {
-        $host = preg_replace('/[^A-Za-z0-9.\-]/', '', $_SERVER['HTTP_HOST'] ?? 'localhost');
-        $headers = "MIME-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8\r\nFrom: =?UTF-8?B?" . base64_encode('Сайт АЙРИС') . "?= <noreply@{$host}>\r\n";
-        @mail((string)$n['email'], '=?UTF-8?B?' . base64_encode("Новая заявка №{$id}") . '?=', $mailText, $headers);
-    }
 }
 
 // ---------- админка: сессия, вход, CSRF ----------

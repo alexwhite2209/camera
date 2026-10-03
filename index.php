@@ -19,7 +19,6 @@ $tgNick = ltrim((string)$c['telegram'], '@');
 $wa    = 'https://wa.me/' . $waNum;
 $tg    = 'https://t.me/' . $tgNick;
 $static = is_static_build();
-try { $token = $static ? '' : form_token(); } catch (Throwable $e) { $token = ''; }
 
 $cfg = [
     'prices'  => $prices,
@@ -79,6 +78,7 @@ $icon = fn(string $name) => '<svg class="i" aria-hidden="true"><use href="#i-' .
   <symbol id="i-phone" viewBox="0 0 24 24"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
   <symbol id="i-wa" viewBox="0 0 24 24"><path d="M3 21l1.65-3.8A9 9 0 1 1 7.8 19.6L3 21" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 10a.5.5 0 0 0 1 0V9a.5.5 0 0 0-1 0v1a5 5 0 0 0 5 5h1a.5.5 0 0 0 0-1h-1a.5.5 0 0 0 0 1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
   <symbol id="i-tg" viewBox="0 0 24 24"><path d="M15 10l-4 4 6 6 4-16-18 7 4 2 2 6 3-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-mail" viewBox="0 0 24 24"><path d="M3 7h18v10H3z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 7l9 6 9-6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
   <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
   <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
   <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
@@ -471,7 +471,7 @@ $icon = fn(string $name) => '<svg class="i" aria-hidden="true"><use href="#i-' .
         <p class="price"><span class="sr-only" id="priceSr">от 30 000 ₽</span><span aria-hidden="true" id="priceNum">от <span class="nf" id="nf">30 000</span> ₽</span><span aria-hidden="true" class="price__est" id="priceEst" hidden>по смете</span></p>
         <ul class="calc__lines" id="calcLines"></ul>
         <p class="calc__note">Оборудование среднего ценового сегмента и монтаж. Точная смета после осмотра объекта.</p>
-        <button class="btn btn--primary btn--shine btn--block" type="button" id="calcGo">Записаться на замер</button>
+        <button class="btn btn--primary btn--shine btn--block" type="button" id="calcGo">Обсудить замер</button>
       </aside>
     </form>
   </div>
@@ -543,83 +543,41 @@ $icon = fn(string $name) => '<svg class="i" aria-hidden="true"><use href="#i-' .
   </div>
 </section>
 
-<!-- Контакты и форма -->
+<!-- Контакты -->
 <section class="section contact" id="contact" aria-labelledby="contactTitle">
   <div class="wrap contact__grid">
     <div class="contact__info" data-reveal>
       <p class="kicker">Связаться</p>
       <h2 class="h2" id="contactTitle">Готовы обсудить ваш объект?</h2>
-      <p class="lead">Оставьте заявку. Бесплатно проконсультируем и составим предварительную смету.</p>
+      <p class="lead">Позвоните или напишите на почту. Проконсультируем бесплатно и составим предварительную смету.</p>
       <a class="contact__phone" href="<?= e($tel) ?>"><?= e($phone) ?></a>
       <p class="contact__hours"><?= e($c['hours']) ?></p>
       <?php if (!empty($c['email'])): ?><a class="contact__mail" href="mailto:<?= e($c['email']) ?>"><?= e($c['email']) ?></a><?php endif; ?>
-      <div class="contact__msg">
-        <a class="btn btn--ghost" href="<?= e($wa) ?>" target="_blank" rel="noopener"><?= $icon('wa') ?>WhatsApp</a>
-        <a class="btn btn--ghost" href="<?= e($tg) ?>" target="_blank" rel="noopener"><?= $icon('tg') ?>Telegram</a>
-      </div>
+      <p class="contact__region"><?= e($c['region']) ?></p>
     </div>
 
-    <div class="formcard" data-reveal>
+    <div class="callcard" data-reveal>
       <span class="spot" aria-hidden="true"></span>
-      <form class="lead-form" id="leadForm" novalidate>
-        <input type="hidden" name="token" value="<?= e($token) ?>">
-        <div class="hp" aria-hidden="true"><label>Сайт <input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
 
-        <div class="calc-chip" id="calcChip" hidden>
-          <span>Ваш расчёт: <b id="calcChipText"></b></span>
-          <button type="button" id="calcChipX" aria-label="Убрать расчёт из заявки"><?= $icon('x') ?></button>
-        </div>
-
-        <div class="field">
-          <label for="fName">Как к вам обращаться</label>
-          <input id="fName" name="name" type="text" autocomplete="name" maxlength="60" required aria-describedby="eName">
-          <p class="err" id="eName" role="alert"></p>
-        </div>
-        <div class="field">
-          <label for="fPhone">Телефон</label>
-          <input id="fPhone" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+7 (___) ___-__-__" required aria-describedby="ePhone">
-          <p class="err" id="ePhone" role="alert"></p>
-        </div>
-        <div class="field">
-          <label for="fObj">Тип объекта</label>
-          <select id="fObj" name="object_type">
-            <option value="">Выберите, если знаете</option>
-            <?php foreach (OBJECT_TYPES as $k => $label): ?>
-              <option value="<?= $k ?>"><?= e($label) ?></option>
-            <?php endforeach; ?>
-          </select>
-        </div>
-        <div class="field">
-          <label for="fComment">Комментарий</label>
-          <textarea id="fComment" name="comment" rows="3" maxlength="1000" placeholder="Например: нужно видеть въезд и калитку"></textarea>
-        </div>
-        <div class="field field--check">
-          <label class="check">
-            <input type="checkbox" name="consent" id="fConsent" aria-describedby="eConsent">
-            <span class="check__box" aria-hidden="true"><?= $icon('check') ?></span>
-            <span>Я даю <a href="<?= page_url('consent') ?>" target="_blank">согласие на обработку персональных данных</a></span>
-          </label>
-          <p class="err" id="eConsent" role="alert"></p>
-        </div>
-        <button class="btn btn--primary btn--block btn--arrow" type="submit" id="leadSubmit"><span>Отправить заявку</span><?= $icon('arrow') ?></button>
-        <p class="form-note">Перезвоним в рабочее время. Подробнее в <a href="<?= page_url('privacy') ?>" target="_blank">Политике обработки персональных данных</a>.</p>
-      </form>
-
-      <div class="form-state form-state--ok" id="formOk" hidden tabindex="-1">
-        <svg class="iris iris--ok" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="21" pathLength="100"/><path d="M15 24.5l6 6 12-12" pathLength="100"/></svg>
-        <h3>Заявка принята</h3>
-        <p>Перезвоним <?= e(mb_strtolower($c['hours'])) ?>. Если срочно, звоните: <a href="<?= e($tel) ?>"><?= e($phone) ?></a></p>
+      <div class="calc-chip" id="calcChip" hidden>
+        <span>Ваш расчёт: <b id="calcChipText"></b></span>
+        <button type="button" id="calcChipX" aria-label="Убрать расчёт из сообщения"><?= $icon('x') ?></button>
       </div>
-      <div class="form-state form-state--fail" id="formFail" hidden tabindex="-1">
-        <h3 id="failTitle">Не удалось отправить</h3>
-        <p id="failText">Отправьте ту же заявку в мессенджер, текст уже готов.</p>
-        <div class="contact__msg">
-          <a class="btn btn--primary" id="failWa" href="<?= e($wa) ?>" target="_blank" rel="noopener"><?= $icon('wa') ?>WhatsApp</a>
-          <a class="btn btn--ghost" id="failTg" href="<?= e($tg) ?>" target="_blank" rel="noopener"><?= $icon('tg') ?>Telegram</a>
-        </div>
-        <p class="form-note" id="failTgNote" hidden>Текст заявки скопирован. Вставьте его в чат.</p>
-        <button class="linkbtn" type="button" id="failRetry">Попробовать ещё раз</button>
+
+      <h3 class="callcard__h">Как с нами связаться</h3>
+      <p class="callcard__p">Позвоните, и мы сразу подскажем, что подойдёт объекту. Если удобнее письмом, напишите на почту: расчёт из калькулятора подставится в текст сам.</p>
+
+      <a class="btn btn--primary btn--block btn--arrow callcard__call" href="<?= e($tel) ?>" id="callBtn"><span>Позвонить <?= e($phone) ?></span><?= $icon('arrow') ?></a>
+      <?php if (!empty($c['email'])): ?>
+      <a class="btn btn--ghost btn--block" id="mailBtn" data-mail="<?= e($c['email']) ?>" href="mailto:<?= e($c['email']) ?>"><?= $icon('mail') ?>Написать на почту</a>
+      <?php endif; ?>
+
+      <div class="contact__msg">
+        <a class="btn btn--ghost" id="waBtn" href="<?= e($wa) ?>" target="_blank" rel="noopener"><?= $icon('wa') ?>WhatsApp</a>
+        <a class="btn btn--ghost" id="tgBtn" href="<?= e($tg) ?>" target="_blank" rel="noopener"><?= $icon('tg') ?>Telegram</a>
       </div>
+      <p class="form-note" id="tgNote" hidden>Текст с расчётом скопирован. Вставьте его в чат.</p>
+      <p class="form-note">Отвечаем <?= e(mb_strtolower($c['hours'])) ?>. Что мы делаем с данными, написано в <a href="<?= page_url('privacy') ?>" target="_blank">Политике обработки персональных данных</a>.</p>
     </div>
   </div>
 </section>
@@ -639,8 +597,8 @@ $icon = fn(string $name) => '<svg class="i" aria-hidden="true"><use href="#i-' .
     </div>
     <div class="foot__col">
       <a href="<?= page_url('privacy') ?>">Политика обработки персональных данных</a>
-      <a href="<?= page_url('consent') ?>">Согласие на обработку персональных данных</a>
       <p class="foot__copy">© <?= date('Y') ?> АЙРИС</p>
+      <?php $ll = legal_line(); if ($ll !== ''): ?><p class="foot__legal"><?= e($ll) ?></p><?php endif; ?>
     </div>
   </div>
 </footer>

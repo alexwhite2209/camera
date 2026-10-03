@@ -1180,13 +1180,12 @@ if (calcForm) {
     goal('calc_done');
     const target = $('#contact');
     scrollTo({ top: target.getBoundingClientRect().top + scrollY - 76, behavior: mqReduce.matches ? 'auto' : 'smooth' });
-    setTimeout(() => $('#fName').focus({ preventScroll: true }), 700);
+    setTimeout(() => { const b = $('#callBtn'); if (b) b.focus({ preventScroll: true }); }, 700);
   });
 }
 
-/* ---------- форма заявки ---------- */
-const form = $('#leadForm');
-let formCalc = null;
+/* ---------- связаться: звонок, почта, мессенджеры ---------- */
+let calcPicked = null;
 function calcText(c) {
   if (!c) return '';
   const sys = SYS.filter(([k]) => c.sel[k]).map(([, l]) => l);
@@ -1199,153 +1198,53 @@ function calcText(c) {
   if (c.est && c.est.length) t += c.price > 0 ? ' + ' + c.est.join(' и ') + ' по смете' : ', по смете';
   return t;
 }
-function attachCalc(c) {
-  formCalc = c;
-  const chip = $('#calcChip');
-  chip.hidden = !c;
-  if (c) {
-    $('#calcChipText').textContent = calcText(c);
-    const objMap = { house: 'house', flat: 'office', office: 'office', warehouse: 'warehouse' };
-    const sel = $('#fObj');
-    if (!sel.value) sel.value = objMap[c.obj] || '';
+
+// Текст сообщения один для почты и мессенджеров: расчёт подставляется, если он есть.
+function msgText() {
+  const lines = ['Здравствуйте! Пишу с сайта АЙРИС.'];
+  if (calcPicked) lines.push('Расчёт с сайта: ' + calcText(calcPicked));
+  lines.push('Подскажите, что подойдёт для объекта и когда можно приехать на замер.');
+  return lines.join('\n');
+}
+
+function syncLinks() {
+  const t = msgText();
+  const mail = $('#mailBtn');
+  if (mail) {
+    mail.href = 'mailto:' + (mail.dataset.mail || '')
+      + '?subject=' + encodeURIComponent('Заявка с сайта АЙРИС')
+      + '&body=' + encodeURIComponent(t);
   }
+  const wa = $('#waBtn');
+  if (wa && CFG.wa) wa.href = 'https://wa.me/' + CFG.wa + '?text=' + encodeURIComponent(t);
+}
+
+function attachCalc(c) {
+  calcPicked = c;
+  const chip = $('#calcChip');
+  if (chip) {
+    chip.hidden = !c;
+    if (c) $('#calcChipText').textContent = calcText(c);
+  }
+  const note = $('#tgNote');
+  if (note) note.hidden = true;
+  syncLinks();
 }
 $('#calcChipX') && $('#calcChipX').addEventListener('click', () => attachCalc(null));
 
-const phoneIn = $('#fPhone');
-function fmtPhone(v) {
-  let d = v.replace(/\D/g, '');
-  if (d.startsWith('7') || d.startsWith('8')) d = d.slice(1);
-  d = d.slice(0, 10);
-  if (!d) return '';
-  let s = '+7 (' + d.slice(0, 3);
-  if (d.length >= 3) s += ') ' + d.slice(3, 6);
-  if (d.length >= 6) s += '-' + d.slice(6, 8);
-  if (d.length >= 8) s += '-' + d.slice(8, 10);
-  return s;
-}
-const phoneDigits = v => { let d = v.replace(/\D/g, ''); if (d.length === 11 && (d[0] === '7' || d[0] === '8')) d = d.slice(1); return d; };
-if (phoneIn) {
-  phoneIn.addEventListener('input', e => {
-    if (e.inputType && e.inputType.startsWith('delete')) return;
-    phoneIn.value = fmtPhone(phoneIn.value);
-  });
-  phoneIn.addEventListener('blur', () => { phoneIn.value = fmtPhone(phoneIn.value); });
-}
-
-function setErr(name, msg) {
-  const map = { name: ['#fName', '#eName'], phone: ['#fPhone', '#ePhone'], consent: ['#fConsent', '#eConsent'] };
-  const m = map[name];
-  if (!m) return;
-  const input = $(m[0]);
-  const field = input.closest('.field');
-  field.classList.toggle('is-bad', !!msg);
-  input.setAttribute('aria-invalid', msg ? 'true' : 'false');
-  $(m[1]).textContent = msg || '';
-}
-function validate() {
-  const errs = {};
-  const name = $('#fName').value.trim();
-  if (name.length < 2 || name.length > 60) errs.name = 'Напишите, как к вам обращаться';
-  if (phoneDigits(phoneIn.value).length !== 10) errs.phone = 'Проверьте номер: нужно 10 цифр после +7';
-  if (!$('#fConsent').checked) errs.consent = 'Отметьте согласие, без него мы не сможем принять заявку';
-  ['name', 'phone', 'consent'].forEach(k => setErr(k, errs[k]));
-  return errs;
-}
-if (form) {
-  $('#fName').addEventListener('input', () => setErr('name', ''));
-  phoneIn.addEventListener('input', () => setErr('phone', ''));
-  $('#fConsent').addEventListener('change', () => setErr('consent', ''));
-}
-
-function utm() {
-  try {
-    const u = new URLSearchParams(location.search);
-    const o = {};
-    ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'].forEach(k => { if (u.get(k)) o[k] = u.get(k).slice(0, 120); });
-    if (Object.keys(o).length) SS.set('iris_utm', JSON.stringify(o));
-    return JSON.parse(SS.get('iris_utm') || '{}');
-  } catch (e) { return {}; }
-}
-const UTM = utm();
-
-function leadText() {
-  const obj = $('#fObj');
-  const lines = ['Здравствуйте! Заявка с сайта АЙРИС.', 'Имя: ' + $('#fName').value.trim(), 'Телефон: ' + phoneIn.value.trim()];
-  if (obj.value) lines.push('Объект: ' + obj.options[obj.selectedIndex].text);
-  if (formCalc) lines.push('Расчёт: ' + calcText(formCalc));
-  const cm = $('#fComment').value.trim();
-  if (cm) lines.push('Комментарий: ' + cm);
-  return lines.join('\n');
-}
-function showFail(msg, title) {
-  const text = leadText();
-  $('#failTitle').textContent = title || 'Не удалось отправить';
-  $('#failText').textContent = msg || 'Отправьте ту же заявку в мессенджер, текст уже готов.';
-  $('#failRetry').textContent = CFG.static ? 'Изменить заявку' : 'Попробовать ещё раз';
-  $('#failWa').href = `https://wa.me/${CFG.wa}?text=${encodeURIComponent(text)}`;
-  form.hidden = true;
-  const box = $('#formFail');
-  box.hidden = false;
-  box.focus();
-}
-if (form) {
-  $('#failTg').addEventListener('click', () => {
-    try { navigator.clipboard.writeText(leadText()); $('#failTgNote').hidden = false; } catch (e) { /* без буфера обмена */ }
-  });
-  $('#failRetry').addEventListener('click', () => { $('#formFail').hidden = true; form.hidden = false; $('#fName').focus(); });
-
-  form.addEventListener('submit', async e => {
-    e.preventDefault();
-    const errs = validate();
-    const first = ['name', 'phone', 'consent'].find(k => errs[k]);
-    if (first) { ({ name: $('#fName'), phone: phoneIn, consent: $('#fConsent') })[first].focus(); return; }
-    // статическая копия без сервера: заявка уходит в мессенджер готовым текстом
-    if (CFG.static) { showFail('Выберите мессенджер: текст заявки уже готов, останется нажать «Отправить».', 'Остался один шаг'); return; }
-    const btn = $('#leadSubmit');
-    const label = $('span', btn);
-    btn.disabled = true;
-    label.textContent = 'Отправляем…';
-    const payload = {
-      name: $('#fName').value.trim(),
-      phone: phoneIn.value,
-      object_type: $('#fObj').value,
-      comment: $('#fComment').value.trim(),
-      consent: $('#fConsent').checked,
-      token: form.token.value,
-      website: form.website.value,
-      calc: formCalc ? { obj: formCalc.obj, sel: formCalc.sel, pts: formCalc.pts, night: formCalc.night, archive: formCalc.archive } : null,
-      source: formCalc ? 'calc' : 'form',
-      page: location.pathname + location.hash,
-      utm: UTM,
-    };
-    const ac = new AbortController();
-    const to = setTimeout(() => ac.abort(), 12000);
+// В ссылку на профиль Telegram текст не подставить, поэтому кладём его в буфер обмена.
+const tgBtn = $('#tgBtn');
+if (tgBtn) {
+  tgBtn.addEventListener('click', () => {
+    if (!calcPicked) return;
     try {
-      const res = await fetch(`${BASE}/api/lead.php`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), signal: ac.signal });
-      clearTimeout(to);
-      let data = null;
-      try { data = await res.json(); } catch (x) { data = null; }
-      if (res.ok && data && data.ok) {
-        form.hidden = true;
-        const ok = $('#formOk');
-        ok.hidden = false;
-        ok.focus();
-        goal('lead_sent');
-      } else if (data && data.error === 'validation' && data.fields) {
-        Object.entries(data.fields).forEach(([k, v]) => setErr(k, v));
-      } else {
-        showFail(data && data.message ? data.message + ' Или отправьте заявку в мессенджер, текст уже готов.' : null);
-      }
-    } catch (x) {
-      clearTimeout(to);
-      showFail();
-    } finally {
-      btn.disabled = false;
-      label.textContent = 'Отправить заявку';
-    }
+      navigator.clipboard.writeText(msgText());
+      const note = $('#tgNote');
+      if (note) note.hidden = false;
+    } catch (e) { /* без буфера обмена */ }
   });
 }
+syncLinks();
 
 /* ---------- отзывы: ленты крутятся, только когда видны ---------- */
 const marqIO = new IntersectionObserver(entries => entries.forEach(en => en.target.classList.toggle('is-vis', en.isIntersecting)), { rootMargin: '100px' });
@@ -1399,6 +1298,7 @@ document.addEventListener('click', e => {
   if (!a) return;
   const h = a.getAttribute('href');
   if (h.startsWith('tel:')) goal('call_click');
+  else if (h.startsWith('mailto:')) goal('mail_click');
   else if (h.includes('wa.me')) goal('wa_click');
   else if (h.includes('t.me')) goal('tg_click');
 });
