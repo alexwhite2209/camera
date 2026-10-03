@@ -30,7 +30,7 @@ if ($keyOk && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
         $_SESSION['uid'] = (int)db()->lastInsertId();
         $_SESSION['last'] = time();
         unset($_SESSION['csrf']);
-        flash('ok', 'Готово, вы администратор. Начните с реквизитов: без них политика и согласие неполные.');
+        flash('ok', 'Готово, вы администратор. Начните с реквизитов: без них политика неполная, а в подвале сайта нет сведений о владельце.');
         redirect(admin_url('docs'));
     }
 }
