@@ -118,6 +118,7 @@ const loadPill = $('#stageLoad');
 const loadPillRing = $('#stageLoadRing');
 const loadPillPct = $('#stageLoadPct');
 const cue = $('#cue');
+const heroConsult = $('#heroConsult');
 
 let FPS = 30;                 // у каждого ролика своя частота кадров
 let DUR = 12.3;               // уточняется по ролику
@@ -484,6 +485,7 @@ function runTicker() {
 
 function paintBeat(i) {
   const s = STOPS[i];
+  if (heroConsult) heroConsult.classList.toggle('is-on', s.n === 1);
   PL.forEach(p => {
     if (!p.el) return;
     const on = p.n === s.n;
@@ -1451,3 +1453,4 @@ runIntro();
 onPageScroll();
 onManifesto();
 })();
+
