@@ -173,6 +173,18 @@ body.is-intro .nav{opacity:0;pointer-events:none}
 @keyframes alarmPulse{50%{opacity:.4}}
 .stage__ui{position:absolute;left:0;right:0;top:0;height:100vh;height:100svh;z-index:3;pointer-events:none}
 .stage__ui .plate,.stage__ui a,.stage__ui button{pointer-events:auto}
+.hero__consult{position:absolute;left:50%;top:clamp(132px,23vh,320px);z-index:4;width:min(92vw,760px);display:flex;flex-direction:column;align-items:center;gap:18px;transform:translateX(-50%);text-align:center;pointer-events:none;opacity:0;visibility:hidden;transition:opacity .45s var(--ease-out),visibility 0s linear .45s;text-shadow:var(--tshadow)}
+.hero__consult.is-on,html.is-static .hero__consult{pointer-events:auto;opacity:1;visibility:visible;transition:opacity .45s var(--ease-out),visibility 0s}
+html:not(.is-static) .hero__consult:not(.is-on) a{pointer-events:none}
+.hero__consult-info{display:flex;align-items:center;justify-content:center;gap:14px;color:var(--tx)}
+.hero__consult-info img{width:52px;height:auto;filter:drop-shadow(0 0 14px rgba(70,210,255,.24))}
+.hero__consult-name{font:600 clamp(28px,2.7vw,46px)/1 var(--f-d);letter-spacing:.08em}
+.hero__consult-services{max-width:100%;color:var(--tx);font:500 clamp(13px,1.25vw,18px)/1.4 var(--f-m);letter-spacing:.12em;text-transform:uppercase}
+.hero__consult-btn{min-width:280px;min-height:56px}
+.hero__consult-btn .i{color:var(--hud)}
+@media (min-width:1061px){
+  .hero__consult{left:auto;right:clamp(28px,7vw,130px);top:clamp(180px,34vh,360px);width:min(46vw,860px);transform:none}
+}
 
 .osd{position:absolute;inset:0;pointer-events:none;font:500 11px/1 var(--f-m);letter-spacing:.09em;color:rgba(232,238,255,.88);text-shadow:0 1px 2px rgba(0,0,0,.85)}
 .osd>*{position:absolute;white-space:nowrap}
@@ -532,6 +544,17 @@ html.is-static .plate__static-cta{display:flex;flex-wrap:wrap;gap:10px;margin-to
   .status li{padding:8px 10px}
   .plate--cta{padding:24px 18px 20px}
   .plate__actions .btn{flex:1 1 100%}
+  .hero__consult{top:clamp(132px,23vh,320px);width:min(94vw,560px);gap:14px}
+  .hero__consult{width:min(94vw,560px)}
+  .hero__consult-info{gap:9px}
+  .hero__consult-info img{width:40px}
+  .hero__consult-name{font-size:clamp(25px,7vw,36px)}
+  .hero__consult-services{font-size:10px;letter-spacing:.08em;line-height:1.55}
+  .hero__consult-btn{min-width:0;width:min(100%,300px)}
+}
+@media (max-width:480px){
+  .hero__consult-info{flex-direction:column;gap:8px}
+  .hero__consult-info span{max-width:30ch}
 }
 @media (max-height:560px) and (min-width:761px){.stage__cue,.stage__load,.osd__bl{display:none}}
 
@@ -588,3 +611,4 @@ html:not(.is-static) .stage.is-full .plate[data-plate="1"]{position:absolute!imp
 .callcard__call{margin-bottom:12px}
 .callcard .contact__msg{margin-top:18px}
 .contact__region{margin-top:18px;color:var(--tx-3);font-size:14px}
+
